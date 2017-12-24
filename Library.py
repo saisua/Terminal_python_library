@@ -5,37 +5,173 @@ path_registro = str(os.getcwd()) + chr(92)
 argumentos = sys.argv
 verbose = 3
 
+lista_argumentos = [["-h", "print(@)"], ["--suma", "sumar(;*)"], ["-a", "anadir(:)"],["-r", "restar(*,.)"],["-m", "multiplicar(2-4*)"]]
+
+###
+def sumar(lista):
+    resultado = 0
+    for numero in lista:
+        resultado += numero
+    print("sumar: "+ str(resultado))
+
+def anadir(lista):
+    resultado = ""
+    for elemento in lista:
+        resultado += str(elemento)
+    print("anadir: " + str(resultado))
+
+def restar(lista):
+    resultado = lista[0] - lista[1]
+    print("restar: " + str(resultado))
+
+def multiplicar(lista):
+    resultado = 1
+    for elemento in lista:
+        resultado *= elemento
+    print("multiplicar: " + str(resultado))
+
+###
+
+def help():
+    print("Esta libreria esta hecha en y para Python"
+    "#['-argumento', 'función_a_ejecutar(variables)']"
+    "#'@' Variable de tipo String"
+    "#'*' Variable de tipo int"
+    "#'.' Variable de tipo double o long"
+    "#'?' Variable de tipo boolean"
+    "#':' Todas las variables sean del tipo que sean"
+    "#';@' Todas las variables del tipo string"
+    "#'$ Variable del tipo que sea"
+    "#'2-4*' Dos a cuatro variables de tipo entero"
+    "#',' Separa dos condiciones")
+
+
 def printf(printed,verb):
     if verbose >= verb:
         print(printed)
 
 def read_arg(argumentos, lista_argumentos):
+    printf("Funcion read_arg(" + str(argumentos) +","+str(lista_argumentos)+")",2)
     lista_variables = []
     variable_numero = 0
+    numero_variables = 0
+    parametros_final = ""
     for arg in argumentos:
+        arg = str(arg)
         if arg[0] == "-":
+            if parametros_final != "":
+                parametros_final = ""
+                exec(str(argumento_analizado[0][0:len(argumento_analizado[0])-1])+str(parametros_final)+")")
             numero_variables = 0
             variable_numero = 0
             #analiza determina el argumento a dar, y que variables esperar
             argumento_analizado = analizar_argumento(arg, lista_argumentos)
-            for tipos_variables in argumento_analizado:
-                for numero_tipos in range(tipos_variables[1]):
-                    lista_variables.append(tipos_variables[0])
-        elif numero_variables != 0:
+            if len(argumento_analizado[1]) != []:
+                lista_variables = argumento_analizado[1:]
+                for argumento in argumento_analizado[1:]:
+                    if numero_variables >= 0:
+                        numero_variables += int(argumento[1])
+            else:
+                exec(argumento_analizado[0])
+        elif len(argumento_analizado[1:]) != 0 and len(lista_variables) >= variable_numero:
+            if numero_variables < 0:
+                #[tipo_argumento,numero_argumentos]
+                lista_variables.insert(variable_numero,lista_variables[variable_numero][0])
+            try:
+                exec(lista_variables[variable_numero][0]+"("+str(arg)+")")
+            except: pass
+            tipo = tipo_argumento(arg)
+            if lista_variables[variable_numero][0] == "all" or lista_variables[variable_numero][0] == tipo:
+                if tipo == "str":
+                    parametros_final += "'"
+                parametros_final += arg
+                if tipo == "str":
+                    parametros_final += "'"
             variable_numero += 1
-            if len(lista_variables) <= variable_numero:
-                if lista_variables[variable_numero][0] == ":" or lista_variables[variable_numero][0] == ";":
-                    lista_variables.append(lista_variables[variable_numero][0])
-                    tipo = tipo_argumento(arg)
-
+    if parametros_final != "":
+        exec(str(argumento_analizado[0][0:len(argumento_analizado[0])-1])+str(parametros_final)+")")
 
 def analizar_argumento(arg, lista_argumentos):
+    printf("Funcion analizar_argumento(" + str(arg) + "," + str(lista_argumentos) + ")",2)
+    funcion_ejecutar = ""
+    tipo_argumento = ""
+    numero_argumentos = 0
+    lista_return = []
+    numero = False
+    asked = ""
     for listed_arg in lista_argumentos:
-        if listed_arg == arg:
-            print("Hola")
-    return [["tipo de var, num"],"...."]
+        if listed_arg[0] == arg:
+            argumento = False
+            for letter in listed_arg[1]:
+                if letter == "(":
+                    argumento = True
+                    funcion_ejecutar += letter
+                elif letter == ")":
+                    argumento = False
+                    if numero_argumentos >= 0:
+                        numero_argumentos += 1
+                        if tipo_argumento != "" :
+                            lista_return.append([tipo_argumento,numero_argumentos])
+                        if numero_argumentos < 0:
+                            break
+                        numero_argumentos = 0
+                        tipo_argumento = ""
+                        numero = False
+                        break
+                elif argumento == True:
+                    #["-argumento", "función_a_ejecutar(variables)"]
+                    #"@" Variable de tipo String
+                    #"*" Variable de tipo int
+                    #"." variable de tipo double o long
+                    #"?" variable de tipo boolean
+                    #":" Todas las variables sean del tipo que sean
+                    #";@" Todas las variables del tipo string
+                    #"$" variable del tipo que sea
+                    #"2-4*" Dos a cuatro variables de tipo entero
+                    #"," Separa dos condiciones
+                    
+                    if letter == ",":
+                        if numero_argumentos >= 0:
+                            numero_argumentos += 1
+                        if tipo_argumento != "":
+                            lista_return.append([tipo_argumento,numero_argumentos])
+                        if numero_argumentos < 0:
+                            break
+                        numero_argumentos = 0
+                        tipo_argumento = ""
+                        numero = False
+                    elif letter == ":":
+                        numero_argumentos = -1
+                        tipo_argumento = "all"
+                    elif letter == ";":
+                        numero_argumentos = -1
+                    elif letter == "@" and tipo_argumento != "all":
+                        tipo_argumento = "str"
+                    elif letter == "*" and tipo_argumento != "all":
+                        tipo_argumento = "int"
+                    elif letter == "?" and tipo_argumento != "all":
+                        tipo_argumento = "bool"
+                    elif letter == "." and tipo_argumento != "all":
+                        tipo_argumento = "float"
 
-def tipo_argumento(arg):
+                    else:
+                        try:
+                            if tipo_argumento(int(letter)) == "int":
+                                numero = True
+                                numero_argumentos = letter
+                                #De momento
+                        except:
+                            asked += letter
+                            pass
+                else:
+                    funcion_ejecutar += letter
+
+    final = [funcion_ejecutar+")"]
+    final.extend(lista_return) 
+    printf("Argumento analizado: " + str(arg) + " necesita " + str(lista_return) + " argumentos para poder ejecutar " + str(funcion_ejecutar) + ")",1)
+    return final
+
+def tipo_argumento(arg):    
     arg = str(type(arg))
     arg_type = arg[8:(len(arg)-2)]
     printf(arg_type,2)
@@ -56,22 +192,12 @@ def abrir_archivo(path,modo):
         else:
             printf("ERROR: el archivo " + str(path) + " no existe", 0)
             printf("",0)
-            printf("Crear ahora? Y/n: ",0)
-            inp = ""
-            while inp == "":
-                inp = str(input())
-                if inp != "":
-                    break
+            inp = preguntar("Crear ahora? Y/n: ")
             if inp == "Y" or inp == "y":
                 printf("Creando " + str(path),1)
                 open(path, modo)
                 printf("Archivo creado!",1)
-                printf("Probar a abrir " + str(path) + "? Y/n:",0)
-                inp = ""
-                while inp != "":
-                    inp = str(input())
-                    if inp != "":
-                        break
+                inp = preguntar("Probar a abrir " + str(path) + "? Y/n:")
                 if inp == "Y" or inp == "y":
                     abrir_archivo(path,modo)
 
@@ -81,6 +207,14 @@ def abrir_archivo(path,modo):
         printf("r = read        w = write",0)
         printf("a = append      r+ = read + write",0)
 
+def preguntar(pregunta):
+    print(pregunta)
+    respuesta = ""
+    while respuesta != "":
+        respuesta = str(input())
+        if respuesta != "":
+            break
+    return respuesta
 
 def leer_fichero(path, cantidad):
     #cantidad de tipo string separa
@@ -236,6 +370,7 @@ def leer_fichero(path, cantidad):
 
     printf("Fichero leído! ", 1)
     printf("Resultado: " + str(final_return), 3)
+    printf("Devolviendo la lista ([valor buscado,posición])")
     return final_return
         
 
@@ -306,6 +441,6 @@ def existe_fichero(path):
     else:
         return False
 
-guardar_fichero(path_registro+"test.txt", [1,2,30,[4,5,6,[7,8,9,[1,2]]],30,2,1])
-print(encontrar_en_fichero(path_registro+"test.txt", 4))
+argumentos = ["-h",1]
+read_arg(argumentos,lista_argumentos)
 print("fin")
