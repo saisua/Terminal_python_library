@@ -128,6 +128,7 @@ def leer_fichero(path, cantidad):
                 guardar_num = 0
                 contador = [0,0]
             elif kant == "-":
+                #Falta hacer 3-6 del 3 al 6
                 if anterior == 0:
                     guardar_num = -1
                 else:
@@ -146,56 +147,71 @@ def leer_fichero(path, cantidad):
                 else:
                     valor += kant
             contador[group] += 1
-######################################
 
         marcapaginas_valor = ""
         valor = ""
-        group = 0
+        group = 1
         contador = [0,0]
+        contar = 0
 
-####################################
         for letter in archivo:
             if letter == "[":
                 group += 1
                 while len(contador) < group + 1:
                     contador.append(0)
-            elif letter == "]":
+            elif letter == "]" and valor == "":
                 group -= 1
-            elif letter == ",":
+            elif letter == "," or (letter == "]" and valor != ""):
                 condicion_guardar = [-100,-100,-100]
                 for condicion_guardar in numero_guardar:
-                    if contador[group] == condicion_guardar[0] and group == condicion_guardar[1]:
-                        if condicion_guardar[2] == -1:
-                            guardar = False
-                        elif condicion_guardar[2] > -1:
-                            guardar = True
-                        break
+                    for condicion_grupo in condicion_guardar[1]:
+                        if contador[group] == condicion_guardar[0] and group == condicion_grupo+1:
+                            if condicion_guardar[2] == -1:
+                                guardar = False
+                            elif condicion_guardar[2] > -1:
+                                guardar = True
+                            break
                 orden_exec = ""
                 pos_exec = ""
                 list_exec = []
                 for c in range(group):
-                    pos_exec += str("[" + str(contador[c]) + "]")
-                    list_exec.extend(contador[c])
+                    if c > 0:
+                        pos_exec += str("[" + str(contador[c]) + "]")
+                        list_exec.append(contador[c])
                 orden_exec += str(".append(valor)")  
                 end_while = False
                 while not end_while:                    
                     try:
-                        printf("exec. final" + str(pos_exec) + str(orden_exec) , 2)
-                        printf("valor: " + str(valor), 2)
-                        exec(str("final"+pos_exec+orden_exec))
+                        if group > 1:
+                            printf("exec. final" + str(pos_exec) + str(orden_exec) , 2)
+                            printf("valor: " + str(valor), 2)
+                            exec(str("final"+pos_exec+orden_exec))
+                            if guardar:
+                                exec(str("final_return"+pos_exec+orden_exec))
+                            else:
+                                exec(str("final_return"+pos_exec+".append(None)"))
+                        else:
+                            exec("final"+orden_exec)
+                            exec("final_return"+orden_exec)
                         end_while = True
                     except IndexError:
                         order = ""
-                        for a in list_exec:
-                            oreder += "[" + a + "]" 
-                            exec("final" + order + ".extend([])")
+                        for a in range(len(list_exec)):
+                            if a > 0:
+                                order += "[" + str(list_exec[a-1]) + "]" 
+                                if a+2 == group:
+                                    exec("final" + order + ".append([])")
+                                    exec("final_return" + order + ".append([])")
+                            elif a == 0 and group -2 == 0:
+                                final.append([])
+                                final_return.append([])
 
                 if guardar == True:
                     printf("Guardado " + str(valor),3)
-                    exec(str("final_return"+orden_exec))
                 if condicion_guardar[2] == 0:
                     guardar = False
                 valor = ""
+                contador[group] += 1
             elif letter == "$":
                 if group >= 0:
                     marcapaginas_antes = contador - 1
@@ -215,7 +231,9 @@ def leer_fichero(path, cantidad):
                     valor += str(letter)
                 else:
                     marcapaginas_valor += str(letter)
-            contador[group] += 1
+            contar += 1
+
+
     printf("Fichero leído! ", 1)
     printf("Resultado: " + str(final_return), 3)
     return final_return
@@ -238,29 +256,41 @@ def guardar_fichero(path, lista):
     
 
 
-def encontrar_fichero(path, busqueda):
+def encontrar_en_fichero(path, busqueda):
     #encuentra un valor o texto en el archivo guardado. Devuelve valor y posicion. Si hay mas de uno, devuelve lista de listas
     path = str(path)
-    printf("Funcion encontrar_fichero(" + str(path) +"," + str(busqueda)+")",2)
+    printf("Funcion encontrar_en_fichero(" + str(path) +"," + str(busqueda)+")",2)
     lista_final = []
-    contador = 0
     lista_busqueda = simplificar_lista(leer_fichero(path,"-"))
-    printf(str(lista_busqueda),3)
+    printf("Buscando " + str(busqueda) + " en " + str(lista_busqueda),3) 
+    encontrar_en_lista(lista_busqueda,str(busqueda))
+    
+
+def encontrar_en_lista(lista, busqueda):
+    contador = 0
+    lista_final = []
+    lista_busqueda = lista
     for valor_guardado in lista_busqueda:
-        printf("Probando el valor " + str(valor_guardado),3)
-        if valor_guardado == busqueda:
-            lista_final.append([valor_guardado, contador])
-            printf("Encontrado valor " + str(valor_guardado) + " en la posicion " + str(contador),2)
+        if tipo_argumento(busqueda) == tipo_argumento(valor_guardado):     
+            printf("Probando el valor " + str(valor_guardado),3)
+            if valor_guardado == busqueda:
+                lista_final.append([valor_guardado, contador])
+                printf("Encontrado valor " + str(valor_guardado) + " en la posicion " + str(contador),2)
+            else:
+                printf(str(valor_guardado) + " != " + str(busqueda), 3)
+            contador += 1
         else:
-            printf(str(valor_guardado) + " != " + str(busqueda), 3)
-        contador += 1
+            printf("El tipo de variable del elemento de la lista " + str(valor_guardado) + " (" + str(tipo_argumento(valor_guardado)) + ") no coincide con el de la lista",2)
+    if contador == 0:
+        printf("O el archivo esta vacio, o el tipo de variable que se busca (" + str(tipo_argumento(busqueda)) + "es erróneo",0)
+
     printf("lista_final = " + str(lista_final),3)
     return lista_final
 
 def simplificar_lista(lista):
     out = []
     for elemento in lista:
-        if hasattr(elemento,'__iter__'):
+        if tipo_argumento(elemento) == "list":
             out.extend("[")
             out.extend(simplificar_lista(elemento))
             out.extend("]")
@@ -276,6 +306,6 @@ def existe_fichero(path):
     else:
         return False
 
-guardar_fichero(path_registro+"test.txt", [1,2,30,[4,5,6,[7,8,9,[1,2]]]])
-print(encontrar_fichero(path_registro+"test.txt", 4))
+guardar_fichero(path_registro+"test.txt", [1,2,30,[4,5,6,[7,8,9,[1,2]]],30,2,1])
+print(encontrar_en_fichero(path_registro+"test.txt", 4))
 print("fin")
