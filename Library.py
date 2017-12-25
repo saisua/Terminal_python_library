@@ -1,30 +1,35 @@
 import os
 import sys
+import socket
 
 path_registro = str(os.getcwd()) + chr(92)
 argumentos = sys.argv
 verbose = 3
-
-lista_argumentos = [["-h", "print(@)"], ["--suma", "sumar(;*)"], ["-a", "anadir(:)"],["-r", "restar(*,.)"],["-m", "multiplicar(2-4*)"]]
+print(argumentos)
+lista_argumentos = [["--close","close_connection()"],["-s","send(@)"],["--server","server()"],["-c","tclient(@,*)"],["-h", "print(@)"], ["--suma", "sumar(;*)"], ["-a", "anadir(:)"],["-r", "restar(*,.)"],["-m", "multiplicar(2-4*)"]]
 
 ###
 def sumar(lista):
+    print("funcion sumar("+str(lista)+")")
     resultado = 0
     for numero in lista:
         resultado += numero
     print("sumar: "+ str(resultado))
 
 def anadir(lista):
+    print("funcion anadir("+str(lista)+")")
     resultado = ""
     for elemento in lista:
         resultado += str(elemento)
     print("anadir: " + str(resultado))
 
 def restar(lista):
+    print("funcion restar("+str(lista)+")")
     resultado = lista[0] - lista[1]
     print("restar: " + str(resultado))
 
 def multiplicar(lista):
+    print("funcion multiplicar("+str(lista)+")")
     resultado = 1
     for elemento in lista:
         resultado *= elemento
@@ -50,45 +55,119 @@ def printf(printed,verb):
     if verbose >= verb:
         print(printed)
 
+def tclient(list):
+    client(list[0],list[1])
+
+def client(host, port):
+    global server
+    server=""
+    host=socket.gethostname()
+    port=42680
+    server=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    try:
+        server.connect((host,port))
+    except:
+        printf("No se ha podido conectar con el servidor",0)
+        pass
+
+def send(message):
+    global server
+    try:
+        server.sendall(message)
+    except:
+        printf("Ha habido un error. Esta el servidor abierto?",0)
+        pass
+
+def server():
+    global server
+    printf("funcion server()",2)
+    host=""
+    port=42680
+    server=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    server.bind((host,port))
+    server.listen(1)
+    conn, addr = server.accept()
+    while True:
+        try:
+            data=conn.recv(1024)
+            try:
+                response = exec(data)
+            except:
+                try:
+                    response = os.system(str(data))
+                except:
+                    pass
+                pass
+            server.sendall(response)
+            if not data:
+                break
+        except socket.error:
+            break
+    conn.close()
+
+def close_connection():
+    global server
+    try:
+        server.close()
+        printf("Parece que el servidor se ha cerrado correctamente",1)
+    except:
+        printf("Ha habido un error. Esta el servidor abierto?",0)
+        pass
+
 def read_arg(argumentos, lista_argumentos):
     printf("Funcion read_arg(" + str(argumentos) +","+str(lista_argumentos)+")",2)
     lista_variables = []
     variable_numero = 0
     numero_variables = 0
     parametros_final = ""
-    for arg in argumentos:
+    lista_final = []
+    for arg in argumentos[1:]:
+                         
         arg = str(arg)
         if arg[0] == "-":
-            if parametros_final != "":
-                parametros_final = ""
+            if len(lista_final) > 0:
+                printf("lista_final = " + str(lista_final),2)
                 exec(str(argumento_analizado[0][0:len(argumento_analizado[0])-1])+str(parametros_final)+")")
+                parametros_final = ""
             numero_variables = 0
             variable_numero = 0
             #analiza determina el argumento a dar, y que variables esperar
             argumento_analizado = analizar_argumento(arg, lista_argumentos)
-            if len(argumento_analizado[1]) != []:
-                lista_variables = argumento_analizado[1:]
-                for argumento in argumento_analizado[1:]:
-                    if numero_variables >= 0:
-                        numero_variables += int(argumento[1])
+            printf("Argumento analizado: " + str(argumento_analizado),1)
+            if len(argumento_analizado) > 1:
+                if argumento_analizado[1] != []:
+                    printf("Se han detectado " + str(len(argumento_analizado[1:])) + " argumentos",2)
+                    lista_variables = (argumento_analizado[1:])
+                    for argumento in argumento_analizado[1:]:
+                        if numero_variables >= 0:
+                            numero_variables += int(argumento[1])
             else:
                 exec(argumento_analizado[0])
         elif len(argumento_analizado[1:]) != 0 and len(lista_variables) >= variable_numero:
             if numero_variables < 0:
                 #[tipo_argumento,numero_argumentos]
-                lista_variables.insert(variable_numero,lista_variables[variable_numero][0])
+                lista_variables.append(lista_variables[variable_numero])
             try:
-                exec(lista_variables[variable_numero][0]+"("+str(arg)+")")
-            except: pass
+                printf("Try: arg = " + str(lista_variables[variable_numero][0])+"("+str(arg) + ")",2)
+                exec("arg = " + str(lista_variables[variable_numero][0])+"("+str(arg)+")")
+            except:
+                printf("Parece que el tipo de argumento no coincide. Puede que haya errores.",1)
+                pass
             tipo = tipo_argumento(arg)
+            printf("lista_variables = " + str(lista_variables),2)
+            printf("variable_numero = " + str(variable_numero),2)
             if lista_variables[variable_numero][0] == "all" or lista_variables[variable_numero][0] == tipo:
+                printf("Tipo = " + str(tipo) + " , " + str(lista_variables[variable_numero][0]),2)
                 if tipo == "str":
                     parametros_final += "'"
                 parametros_final += arg
                 if tipo == "str":
                     parametros_final += "'"
+                printf("parametros_final = " + str(parametros_final),2)
+                lista_final.extend(parametros_final)
             variable_numero += 1
-    if parametros_final != "":
+    printf("lista_final = " + str(lista_final),2)
+    if len(lista_final) > 0:
         exec(str(argumento_analizado[0][0:len(argumento_analizado[0])-1])+str(parametros_final)+")")
 
 def analizar_argumento(arg, lista_argumentos):
@@ -101,8 +180,11 @@ def analizar_argumento(arg, lista_argumentos):
     asked = ""
     for listed_arg in lista_argumentos:
         if listed_arg[0] == arg:
+            printf("Argumento " + str(arg) + " encontrado. Analizando...",1)
             argumento = False
             for letter in listed_arg[1]:
+                printf("Letter = " + str(letter),3)
+                printf("tipo_argumentos = " + str(tipo_argumento) + ", numero_argumentos = " + str(numero_argumentos),3)
                 if letter == "(":
                     argumento = True
                     funcion_ejecutar += letter
@@ -110,14 +192,15 @@ def analizar_argumento(arg, lista_argumentos):
                     argumento = False
                     if numero_argumentos >= 0:
                         numero_argumentos += 1
-                        if tipo_argumento != "" :
-                            lista_return.append([tipo_argumento,numero_argumentos])
-                        if numero_argumentos < 0:
-                            break
-                        numero_argumentos = 0
-                        tipo_argumento = ""
-                        numero = False
+                    if tipo_argumento != "" :
+                        lista_return.append([tipo_argumento,numero_argumentos])
+                        printf("lista_return = " + str(lista_return),2)
+                    if numero_argumentos < 0:
                         break
+                    numero_argumentos = 0
+                    tipo_argumento = ""
+                    numero = False
+                    break
                 elif argumento == True:
                     #["-argumento", "función_a_ejecutar(variables)"]
                     #"@" Variable de tipo String
@@ -129,11 +212,12 @@ def analizar_argumento(arg, lista_argumentos):
                     #"$" variable del tipo que sea
                     #"2-4*" Dos a cuatro variables de tipo entero
                     #"," Separa dos condiciones
-                    
+
                     if letter == ",":
                         if numero_argumentos >= 0:
                             numero_argumentos += 1
                         if tipo_argumento != "":
+                            printf("Añadido argumento: "+ str([tipo_argumento,numero_argumentos]),2)
                             lista_return.append([tipo_argumento,numero_argumentos])
                         if numero_argumentos < 0:
                             break
@@ -143,17 +227,22 @@ def analizar_argumento(arg, lista_argumentos):
                     elif letter == ":":
                         numero_argumentos = -1
                         tipo_argumento = "all"
+                        printf("Encontrado '"+str(letter)+"'. > numero_argumentos = " + str(numero_argumentos) + ", tipo_argumento = " + str(tipo_argumento),2)
                     elif letter == ";":
                         numero_argumentos = -1
+                        printf("Encontrado '"+str(letter)+"'. > numero_argumentos = " + str(numero_argumentos),2)
                     elif letter == "@" and tipo_argumento != "all":
                         tipo_argumento = "str"
+                        printf("Encontrado '"+str(letter)+"'. > numero_argumentos = " + str(numero_argumentos),2)
                     elif letter == "*" and tipo_argumento != "all":
                         tipo_argumento = "int"
+                        printf("Encontrado '"+str(letter)+"'. > numero_argumentos = " + str(numero_argumentos),2)
                     elif letter == "?" and tipo_argumento != "all":
                         tipo_argumento = "bool"
+                        printf("Encontrado '"+str(letter)+"'. > numero_argumentos = " + str(numero_argumentos),2)
                     elif letter == "." and tipo_argumento != "all":
                         tipo_argumento = "float"
-
+                        printf("Encontrado '"+str(letter)+"'. > numero_argumentos = " + str(numero_argumentos),2)
                     else:
                         try:
                             if tipo_argumento(int(letter)) == "int":
@@ -166,12 +255,15 @@ def analizar_argumento(arg, lista_argumentos):
                 else:
                     funcion_ejecutar += letter
 
-    final = [funcion_ejecutar+")"]
+    if listed_arg[1] != "-":
+        final = [funcion_ejecutar+")"]
     final.extend(lista_return) 
     printf("Argumento analizado: " + str(arg) + " necesita " + str(lista_return) + " argumentos para poder ejecutar " + str(funcion_ejecutar) + ")",1)
+    printf("final = " + str(final),2)
     return final
 
-def tipo_argumento(arg):    
+def tipo_argumento(arg):
+    printf("Funcion tipo_argumento("+str(arg)+")",2)
     arg = str(type(arg))
     arg_type = arg[8:(len(arg)-2)]
     printf(arg_type,2)
@@ -441,6 +533,5 @@ def existe_fichero(path):
     else:
         return False
 
-argumentos = ["-h",1]
 read_arg(argumentos,lista_argumentos)
 print("fin")
