@@ -55,9 +55,9 @@ def help():
     "#'*' Variable de tipo int"
     "#'.' Variable de tipo double o long"
     "#'?' Variable de tipo boolean"
+    "#'$' variable del tipo que sea"
     "#':' Todas las variables sean del tipo que sean"
     "#';@' Todas las variables del tipo string"
-    "#'$ Variable del tipo que sea"
     "#'2-4*' Dos a cuatro variables de tipo entero"
     "#',' Separa dos condiciones")
 
@@ -284,17 +284,13 @@ def read_arg(argumentos, lista_argumentos):
             if numero_variables < 0:
                 #[tipo_argumento,numero_argumentos]
                 lista_variables.append(lista_variables[variable_numero])
-            try:
-                printf("Try: arg = " + str(lista_variables[variable_numero][0])+"("+str(arg) + ")",2)
-                exec("arg = " + str(lista_variables[variable_numero][0])+"("+str(arg)+")")
-                if lista_variables[variable_numero][0] == "int":    
-                    try:
-                        arg = int(arg)
-                    except:
-                        pass
-            except:
-                printf("Parece que el tipo de argumento no coincide. Puede que haya errores.",1)
-                pass
+            if lista_variables[variable_numero][0] != "all"
+                try:
+                    printf("Try: arg = " + str(lista_variables[variable_numero][0])+"("+str(arg) + ")",2)
+                    cambiar_tipo(arg,str(lista_variables[variable_numero][0]))
+                except:
+                    printf("Parece que el tipo de argumento no coincide. Puede que haya errores.",1)
+                    pass
             tipo = tipo_argumento(arg)
             printf("lista_variables = " + str(lista_variables),2)
             printf("variable_numero = " + str(variable_numero),2)
@@ -351,9 +347,9 @@ def analizar_argumento(arg, lista_argumentos):
                     #"*" Variable de tipo int
                     #"." variable de tipo double o long
                     #"?" variable de tipo boolean
+                    #"$" variable del tipo que sea
                     #":" Todas las variables sean del tipo que sean
                     #";@" Todas las variables del tipo string
-                    #"$" variable del tipo que sea
                     #"2-4*" Dos a cuatro variables de tipo entero
                     #"," Separa dos condiciones
 
@@ -374,6 +370,9 @@ def analizar_argumento(arg, lista_argumentos):
                         printf("Encontrado '"+str(letter)+"'. > numero_argumentos = " + str(numero_argumentos) + ", tipo_argumento = " + str(tipo_argumento),2)
                     elif letter == ";":
                         numero_argumentos = -1
+                        printf("Encontrado '"+str(letter)+"'. > numero_argumentos = " + str(numero_argumentos),2)
+                    elif letter == "$":
+                        tipo_argumento = "all"
                         printf("Encontrado '"+str(letter)+"'. > numero_argumentos = " + str(numero_argumentos),2)
                     elif letter == "@" and tipo_argumento != "all":
                         tipo_argumento = "str"
@@ -405,6 +404,36 @@ def analizar_argumento(arg, lista_argumentos):
     printf("Argumento analizado: " + str(arg) + " necesita " + str(lista_return) + " argumentos para poder ejecutar " + str(funcion_ejecutar) + ")",1)
     printf("final = " + str(final),2)
     return final
+
+def cambiar_tipo(arg, tipo):
+    if tipo_argumento(arg) == tipo:
+        return arg
+    else:
+        if tipo == "str":
+            try:
+                arg = str(arg)
+                return arg
+            except:
+                pass
+        elif tipo == "int":
+            try:
+                arg = int(arg)
+                return arg
+            except:
+                pass
+        elif tipo == "float":
+            try:
+                arg = float(arg)
+                return arg
+            except:
+                pass
+        elif tipo == "bool":
+            try:
+                arg = bool(arg)
+                return arg
+            except:
+                pass
+    return arg
 
 def tipo_argumento(arg):
     printf("Funcion tipo_argumento("+str(arg)+")",2)
