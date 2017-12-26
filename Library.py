@@ -3,6 +3,7 @@ import os
 import sys
 import socket
 import urllib.request
+import select
 
 path_registro = str(os.getcwd()) + chr(92)
 argumentos = sys.argv
@@ -69,7 +70,7 @@ def tclient(list):
     print()
     client(list[0],list[1])
 
-def client(host, port=42680):
+def client(host, port=55555):
     global server
     printf("funcion client(" + str(host) + "," + str(port)+")",2)
     server=""
@@ -100,7 +101,7 @@ def client(host, port=42680):
             mi_ip = (([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")] or [[(s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) + ["no IP found"])[0]
         else:
             mi_ip = str(urllib.request.urlopen('http://ip.42.pl/raw').read())
-            mi_ip = mi_ip[2:len(public_ip)-1]
+            mi_ip = mi_ip[2:len(mi_ip)-1]
         try:
             sendtoall("server2.connect(("+str(mi_ip)+","+str(port+1)+"))")
         except:
@@ -108,7 +109,7 @@ def client(host, port=42680):
             printf("Este es un punto sin retorno. Deberias reiniciar el programa",0)
             pass
         printf("Porfavor, espere a que el servidor responda. ",0)
-        conn2, addr2 = server2.accept()
+        #conn2, addr2 = server2.accept()
 
         printf("Instrucciones al servidor:",0)
         data = None
@@ -118,7 +119,7 @@ def client(host, port=42680):
                 break
             elif r != "":
                 data = sendtoall(r)
-            conn2.recv(1024)
+            #conn2.recv(1024)
             if data:
                 printf("El servidor responde: " + str(data),0)
 
@@ -135,9 +136,9 @@ def server():
     global server
     printf("funcion server()",2)
     host=""
-    port=42680
+    port=55555
     server=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    server2=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    #server2=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     printf("Intentando establecer el servidor",1)
     printf("Servidor en:",0)
     printf("Local ip (LAN): "+ str((([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")] or [[(s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) + ["no IP found"])[0]),-3)
@@ -147,16 +148,17 @@ def server():
     printf("Port = " + str(port),-3)
     server.bind((host,port))
     server.listen(0)
-    conn, addr = server.accept()
-    data = ""
+    (client_socket, address) = server.accept()
     printf("Se ha conectado un cliente",0)
+    printf("Cliente: " +str(address),1)
+    data = "b''"
     while True:
         r = preguntar_din()
         if r == "exit":
             break
         try:
-            data=conn.recv(1024)
-            #data = server.recv(1024)
+            data=client_socket.recv(1024)
+            data = server.recv(1024)
             if str(data) != "b''":    
                 response = try_execute(data)
                 if not response:
@@ -166,13 +168,12 @@ def server():
                     printf("Enviada informacion de vuelta: " + str(response),3)
                     data = ""
                 except:
-                    printf("No se ha podido enviar de vuelta al cliente",0)
+                    printf("No se ha podido contestar al cliente",0)
                     pass
         except socket.error:
             printf("Error: Socket error",0)
             break
     conn.close()
-    close_server()
     printf("Conexión cerrada",0)
 
 def try_execute(data):
@@ -193,10 +194,13 @@ def close_server():
     global server
     try:
         server.shutdown()
-        server.close()
         printf("Parece que el servidor se ha cerrado correctamente",1)
     except:
         printf("Ha habido un error. Esta el servidor abierto?",0)
+        pass    
+    try:
+        server.close()
+    except:
         pass
 
 def read_arg(argumentos, lista_argumentos):
@@ -569,7 +573,6 @@ def leer_fichero(path, cantidad):
     printf("Devolviendo la lista ([valor buscado,posición])")
     return final_return
         
-
 def guardar_fichero(path, lista):
     abrir_archivo(path,"w")
     archivo = abrir_archivo(path,"a")
@@ -584,9 +587,6 @@ def guardar_fichero(path, lista):
     archivo.write(write_this)
     archivo.close()
 
-    
-
-
 def encontrar_en_fichero(path, busqueda):
     #encuentra un valor o texto en el archivo guardado. Devuelve valor y posicion. Si hay mas de uno, devuelve lista de listas
     path = str(path)
@@ -596,7 +596,6 @@ def encontrar_en_fichero(path, busqueda):
     printf("Buscando " + str(busqueda) + " en " + str(lista_busqueda),3) 
     encontrar_en_lista(lista_busqueda,str(busqueda))
     
-
 def encontrar_en_lista(lista, busqueda):
     contador = 0
     lista_final = []
