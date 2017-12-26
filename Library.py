@@ -6,7 +6,7 @@ import urllib.request
 
 path_registro = str(os.getcwd()) + chr(92)
 argumentos = sys.argv
-verbose = 0
+verbose = 3
 lista_argumentos = [["--hh","ejecutar(@;)"],["--close","close_server()"],["-s","sendtoall(@)"],["--server","server()"],["-c","tclient(@,*)"],["-h", "print(@)"], ["--suma", "sumar(;*)"], ["-a", "anadir(:)"],["-r", "restar(*,.)"],["-m", "multiplicar(2-4*)"]]
 
 ###
@@ -74,16 +74,40 @@ def client(host, port=42680):
     printf("funcion client(" + str(host) + "," + str(port)+")",2)
     server=""
     server=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    server2=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    server2.bind((host,port+1))
+    server2.listen(0)
     printf("Server = " + str(server),3)
-    r = "y"
+    acceder = "no"
+    salir = False
+    while not salir:
+        try:
+            server.connect((host,port))
+            printf("Se ha establecido conexion correctamente con " + str(host),0)
+            salir = True
+            acceder = "y"
+        except:
+            printf("No se ha podido conectar con el servidor",0)
+            r = preguntar("Reintentar conexion? Y/n/forzar")
+            if r == "forzar" or r == "Forzar" or r == "FORZAR":
+                salir = True
+                acceder = "y"
+            elif r == "n" or r == "N":
+                break
+            pass
+    if host[0:2] == "192":
+        mi_ip = (([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")] or [[(s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) + ["no IP found"])[0]
+    else:
+        mi_ip = str(urllib.request.urlopen('http://ip.42.pl/raw').read())[2:len(public_ip)-1]
     try:
-        server.connect((host,port))
-        printf("Se ha establecido conexion correctamente con " + str(host),0)
+        sendtoall("server2.connect(("+str(mi_ip)+","+str(port+1)+"))")
     except:
-        printf("No se ha podido conectar con el servidor",0)
-        r = preguntar("Intentar conexion? Y/n")
+        printf("ERROR: Ha habido un problema al conectarse con el servidor.",0)
+        printf("Este es un punto sin retorno. Deberias reiniciar el programa",0)
         pass
-    if r == "y" or r == "Y":    
+    printf("Porfavor, espere a que el servidor responda. ",0)
+    conn, addr = server2.accept()
+    if acceder == "y" or acceder == "Y":    
         printf("Instrucciones al servidor:",0)
         data = None
         while True:
@@ -111,11 +135,12 @@ def server():
     host=""
     port=42680
     server=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    server2=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     printf("Intentando establecer el servidor",1)
     printf("Servidor en:",0)
     printf("Local ip (LAN): "+ str((([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")] or [[(s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) + ["no IP found"])[0]),-3)
-    public_ip = str(urllib.request.urlopen('http://ip.42.pl/raw').read())
-    printf("Public ip: " + public_ip[2:len(public_ip)-1],-3)
+    public_ip = str(urllib.request.urlopen('http://ip.42.pl/raw').read())[2:len(public_ip)-1]
+    printf("Public ip: " + public_ip,-3)
     printf("Port = " + str(port),-3)
     server.bind((host,port))
     server.listen(0)
@@ -610,4 +635,4 @@ def existe_fichero(path):
         return False
 
 read_arg(argumentos,lista_argumentos)
-print("fin")
+printf("fin",1)
