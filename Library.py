@@ -67,23 +67,25 @@ def printf(printed,verb):
         print(printed)
 
 def tclient(list):
-    print()
-    client(list[0],list[1])
+    print("funcion tclient("+str(list)+")")
+    client(str(list[0]),list[1])
 
-def client(host, port=55555):
-    global server
+def client(host, port):
+    global server, client_socket, server2, client_socket2
     printf("funcion client(" + str(host) + "," + str(port)+")",2)
     server=""
     server=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    server2=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    server2.bind(("",port+1))
-    server2.listen(0)
     printf("Server = " + str(server),3)
     acceder = "no"
     conexion = False
     while not conexion:
         try:
-            server.connect((host,port))
+            print("Server_ip = " + str(host) + ", port = " + str(port))
+            if host[0] == "'":
+                host = host[1:len(host)-1]
+            server.connect((str(host),int(port)))
+            server2.bind((host,port+1))
+            server2.listen(0)
             printf("Se ha establecido conexion correctamente con " + str(host),0)
             conexion = True
             acceder = "y"
@@ -93,75 +95,77 @@ def client(host, port=55555):
             if r == "forzar" or r == "Forzar" or r == "FORZAR":
                 conexion = True
                 acceder = "y"
-            elif r == "n" or r == "N":
+            elif r == "n" or r == "N" or r == "no" or r == "No" or r == "NO":
                 break
             pass
-    if acceder == "y" or acceder == "Y":    
-        if host[0:2] == "192":
-            mi_ip = (([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")] or [[(s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) + ["no IP found"])[0]
-        else:
-            mi_ip = str(urllib.request.urlopen('http://ip.42.pl/raw').read())
-            mi_ip = mi_ip[2:len(mi_ip)-1]
-        try:
-            sendtoall("server2.connect(("+str(mi_ip)+","+str(port+1)+"))")
-        except:
-            printf("ERROR: Ha habido un problema al conectarse con el servidor.",0)
-            printf("Este es un punto sin retorno. Deberias reiniciar el programa",0)
-            pass
-        printf("Porfavor, espere a que el servidor responda. ",0)
-        #conn2, addr2 = server2.accept()
-
+    if acceder == "y" or acceder == "Y" or acceder == "yes" or acceder == "Yes" or acceder == "YES":    
         printf("Instrucciones al servidor:",0)
-        data = None
+        data = ""
         while True:
             r = preguntar_din() 
             if r == "exit":
                 break
             elif r != "":
-                data = sendtoall(r)
-            #conn2.recv(1024)
-            if data:
+                data = sendtoserver(r)
+                r = ""
+            data = server.recv(1024).decode("utf-8")
+            if data != "":
                 printf("El servidor responde: " + str(data),0)
+                data = ""
 
 
-def sendtoall(message):
-    global server
+def sendtoserver(message):
+    global server, client_socket, server2, client_socket2
     try:
         server.sendall(bytearray(message,"utf-8"))
+        printf("Enviado mensaje: " + str(message),3)
     except:
-        printf("Ha habido un error. Esta el servidor abierto?",0)
+        printf("Ha habido un error. Esta el servidor visible?",0)
         pass
 
+def sendtoall(message):
+    global server, client_socket, server2, client_socket2
+    try:
+        client_socket.sendall(bytearray(message,"utf-8"))
+        printf("Enviado mensaje: " + str(message),3)
+    except:
+        printf("Ha habido un error. Esta el receptor visible?",0)
+        pass
+
+
 def server():
-    global server
+    global server, client_socket, server2, client_socket2
     printf("funcion server()",2)
     host=""
-    port=55555
+    port=42680
     server=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    #server2=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    server2=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     printf("Intentando establecer el servidor",1)
     printf("Servidor en:",0)
-    printf("Local ip (LAN): "+ str((([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")] or [[(s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) + ["no IP found"])[0]),-3)
+    local_ip = (([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")] or [[(s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) + ["no IP found"])[0]
+    printf("Local ip (LAN): "+ str(local_ip),-3)
     public_ip = str(urllib.request.urlopen('http://ip.42.pl/raw').read())
     public_ip = public_ip[2:len(public_ip)-1]
     printf("Public ip: " + public_ip,-3)
     printf("Port = " + str(port),-3)
+
     server.bind((host,port))
     server.listen(0)
     (client_socket, address) = server.accept()
     printf("Se ha conectado un cliente",0)
     printf("Cliente: " +str(address),1)
-    data = "b''"
+    data = ""
+    r = ""
     while True:
-        r = preguntar_din()
-        if r == "exit":
-            break
         try:
-            data=client_socket.recv(1024)
-            data = server.recv(1024)
-            if str(data) != "b''":    
+            r = preguntar_din()
+            data=client_socket.recv(1024).decode("utf-8")
+            #data = server.recv(1024)
+            if str(data) != "":    
+                printf("Recibido mensaje: " + str(data),3)
                 response = try_execute(data)
                 if not response:
+                    printf("Parece que no se devuelve respuesta. response = -1",3)
                     response = -1
                 try:
                     sendtoall(response)
@@ -170,16 +174,24 @@ def server():
                 except:
                     printf("No se ha podido contestar al cliente",0)
                     pass
+            if r == "exit":
+                break
+            elif r != "":
+                sendtoall(r)
+            
         except socket.error:
             printf("Error: Socket error",0)
             break
-    conn.close()
-    printf("Conexión cerrada",0)
+    close_server()
+    client_socket.close()
+    printf("Conexión cerrada correctamente",0)
 
 def try_execute(data):
+    global server, client_socket, server2, client_socket2
     response = None
+    printf("funcion try_execute("+str(data)+")",2)
     try:          
-        response = exec(data)
+        response = exec(data)        
         printf("Ejecutado en python " + str(data),2)
     except:
         try:
