@@ -153,7 +153,7 @@ def server():
     global server, client_socket
     printf("funcion server()",2)
     host=""
-    port=55555
+    port=42680
     server=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     server2=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     printf("Intentando establecer el servidor",1)
@@ -284,7 +284,7 @@ def read_arg(argumentos, lista_argumentos):
             if numero_variables < 0:
                 #[tipo_argumento,numero_argumentos]
                 lista_variables.append(lista_variables[variable_numero])
-            if lista_variables[variable_numero][0] != "all"
+            if lista_variables[variable_numero][0] != "all":
                 try:
                     printf("Try: arg = " + str(lista_variables[variable_numero][0])+"("+str(arg) + ")",2)
                     cambiar_tipo(arg,str(lista_variables[variable_numero][0]))
