@@ -1,12 +1,13 @@
+#/bin/env python
 import os
 import sys
 import socket
+import urllib.request
 
 path_registro = str(os.getcwd()) + chr(92)
 argumentos = sys.argv
-verbose = 3
-print(argumentos)
-lista_argumentos = [["--close","close_connection()"],["-s","send(@)"],["--server","server()"],["-c","tclient(@,*)"],["-h", "print(@)"], ["--suma", "sumar(;*)"], ["-a", "anadir(:)"],["-r", "restar(*,.)"],["-m", "multiplicar(2-4*)"]]
+verbose = 0
+lista_argumentos = [["--hh","ejecutar(@;)"],["--close","close_server()"],["-s","sendtoall(@)"],["--server","server()"],["-c","tclient(@,*)"],["-h", "print(@)"], ["--suma", "sumar(;*)"], ["-a", "anadir(:)"],["-r", "restar(*,.)"],["-m", "multiplicar(2-4*)"]]
 
 ###
 def sumar(lista):
@@ -35,6 +36,15 @@ def multiplicar(lista):
         resultado *= elemento
     print("multiplicar: " + str(resultado))
 
+def ejecutar(orden):
+    print("funcion ejecutar("+str(orden)+")")
+    for a in orden:
+        printf("a = " + str(a[1:len(a)-1]),3)
+        try:
+            exec(str(a[1:len(a)-1]))
+        except:
+            print("Error ejecutando la orden " + str(a[1:len(a)-1]))
+            pass
 ###
 
 def help():
@@ -56,24 +66,41 @@ def printf(printed,verb):
         print(printed)
 
 def tclient(list):
+    print()
     client(list[0],list[1])
 
-def client(host, port):
+def client(host, port=42680):
     global server
+    printf("funcion client(" + str(host) + "," + str(port)+")",2)
     server=""
-    host=socket.gethostname()
-    port=42680
     server=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    printf("Server = " + str(server),3)
+    r = "y"
     try:
         server.connect((host,port))
+        printf("Se ha establecido conexion correctamente con " + str(host),0)
     except:
         printf("No se ha podido conectar con el servidor",0)
+        r = preguntar("Intentar conexion? Y/n")
         pass
+    if r == "y" or r == "Y":    
+        printf("Instrucciones al servidor:",0)
+        data = None
+        while True:
+            r = preguntar_din() 
+            if r == "exit":
+                break
+            elif r != "":
+                data = sendtoall(r)
+            #data=server.recv(1024)
+            if data:
+                printf("El servidor responde: " + str(data),0)
 
-def send(message):
+
+def sendtoall(message):
     global server
     try:
-        server.sendall(message)
+        server.sendall(bytearray(message,"utf-8"))
     except:
         printf("Ha habido un error. Esta el servidor abierto?",0)
         pass
@@ -84,30 +111,60 @@ def server():
     host=""
     port=42680
     server=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    printf("Intentando establecer el servidor",1)
+    printf("Servidor en:",0)
+    printf("Local ip (LAN): "+ str((([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")] or [[(s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) + ["no IP found"])[0]),-3)
+    public_ip = str(urllib.request.urlopen('http://ip.42.pl/raw').read())
+    printf("Public ip: " + public_ip[2:len(public_ip)-1],-3)
+    printf("Port = " + str(port),-3)
     server.bind((host,port))
-    server.listen(1)
+    server.listen(0)
     conn, addr = server.accept()
+    data = ""
+    printf("Se ha conectado un cliente",0)
     while True:
+        r = preguntar_din()
+        if r == "exit":
+            break
         try:
             data=conn.recv(1024)
-            try:
-                response = exec(data)
-            except:
+            #data = server.recv(1024)
+            if str(data) != "b''":    
+                response = try_execute(data)
+                if not response:
+                    response = -1
                 try:
-                    response = os.system(str(data))
+                    sendtoall(response)
+                    printf("Enviada informacion de vuelta: " + str(response),3)
+                    data = ""
                 except:
+                    printf("No se ha podido enviar de vuelta al cliente",0)
                     pass
-                pass
-            server.sendall(response)
-            if not data:
-                break
         except socket.error:
+            printf("Error: Socket error",0)
             break
     conn.close()
+    close_server()
+    printf("Conexión cerrada",0)
 
-def close_connection():
+def try_execute(data):
+    response = None
+    try:          
+        response = exec(data)
+        printf("Ejecutado en python " + str(data),2)
+    except:
+        try:
+            response = os.system(str(data))
+            printf("Ejecutado en el sistema " + str(data),2)
+        except:
+            pass
+        pass
+    return response
+
+def close_server():
     global server
     try:
+        server.shutdown()
         server.close()
         printf("Parece que el servidor se ha cerrado correctamente",1)
     except:
@@ -121,14 +178,15 @@ def read_arg(argumentos, lista_argumentos):
     numero_variables = 0
     parametros_final = ""
     lista_final = []
-    for arg in argumentos[1:]:
-                         
+    for arg in argumentos[1:]:                   
         arg = str(arg)
+        printf("arg = " + str(arg),3)
         if arg[0] == "-":
             if len(lista_final) > 0:
                 printf("lista_final = " + str(lista_final),2)
-                exec(str(argumento_analizado[0][0:len(argumento_analizado[0])-1])+str(parametros_final)+")")
+                exec(str(argumento_analizado[0][0:len(argumento_analizado[0])-1])+str(lista_final)+")")
                 parametros_final = ""
+                lista_final = []
             numero_variables = 0
             variable_numero = 0
             #analiza determina el argumento a dar, y que variables esperar
@@ -142,6 +200,7 @@ def read_arg(argumentos, lista_argumentos):
                         if numero_variables >= 0:
                             numero_variables += int(argumento[1])
             else:
+                printf("Parece que no hay argumentos. Ejecutando " + str(argumento_analizado[0]),1)
                 exec(argumento_analizado[0])
         elif len(argumento_analizado[1:]) != 0 and len(lista_variables) >= variable_numero:
             if numero_variables < 0:
@@ -150,6 +209,11 @@ def read_arg(argumentos, lista_argumentos):
             try:
                 printf("Try: arg = " + str(lista_variables[variable_numero][0])+"("+str(arg) + ")",2)
                 exec("arg = " + str(lista_variables[variable_numero][0])+"("+str(arg)+")")
+                if lista_variables[variable_numero][0] == "int":    
+                    try:
+                        arg = int(arg)
+                    except:
+                        pass
             except:
                 printf("Parece que el tipo de argumento no coincide. Puede que haya errores.",1)
                 pass
@@ -160,15 +224,17 @@ def read_arg(argumentos, lista_argumentos):
                 printf("Tipo = " + str(tipo) + " , " + str(lista_variables[variable_numero][0]),2)
                 if tipo == "str":
                     parametros_final += "'"
-                parametros_final += arg
-                if tipo == "str":
+                    parametros_final += arg
                     parametros_final += "'"
-                printf("parametros_final = " + str(parametros_final),2)
-                lista_final.extend(parametros_final)
+                    lista_final.append(parametros_final)
+                    printf("parametros_final = " + str(parametros_final),2)
+                else:
+                    lista_final.append(arg)
+                parametros_final = ""
             variable_numero += 1
     printf("lista_final = " + str(lista_final),2)
     if len(lista_final) > 0:
-        exec(str(argumento_analizado[0][0:len(argumento_analizado[0])-1])+str(parametros_final)+")")
+        exec(str(argumento_analizado[0][0:len(argumento_analizado[0])-1])+str(lista_final)+")")
 
 def analizar_argumento(arg, lista_argumentos):
     printf("Funcion analizar_argumento(" + str(arg) + "," + str(lista_argumentos) + ")",2)
@@ -300,13 +366,23 @@ def abrir_archivo(path,modo):
         printf("a = append      r+ = read + write",0)
 
 def preguntar(pregunta):
+    printf("funcion preguntar(" + str(pregunta)+ ")",2)
     print(pregunta)
     respuesta = ""
-    while respuesta != "":
+    while True:
         respuesta = str(input())
         if respuesta != "":
+            printf("respuesta = " + str(respuesta),2)
             break
     return respuesta
+
+def preguntar_din():
+    printf("funcion preguntar_din()",2)
+    respuesta = ""
+    respuesta = str(input())
+    if respuesta != "":
+        printf("respuesta = " + str(respuesta),2)
+        return respuesta
 
 def leer_fichero(path, cantidad):
     #cantidad de tipo string separa
