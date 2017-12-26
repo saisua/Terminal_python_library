@@ -71,7 +71,7 @@ def tclient(list):
     client(str(list[0]),list[1])
 
 def client(host, port):
-    global server, client_socket, server2, client_socket2
+    global server, client_socket
     printf("funcion client(" + str(host) + "," + str(port)+")",2)
     server=""
     server=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -84,8 +84,8 @@ def client(host, port):
             if host[0] == "'":
                 host = host[1:len(host)-1]
             server.connect((str(host),int(port)))
-            server2.bind((host,port+1))
-            server2.listen(0)
+            #server2.bind((host,port+1))
+            #server2.listen(0)
             printf("Se ha establecido conexion correctamente con " + str(host),0)
             conexion = True
             acceder = "y"
@@ -115,7 +115,7 @@ def client(host, port):
 
 
 def sendtoserver(message):
-    global server, client_socket, server2, client_socket2
+    global server, client_socket
     try:
         server.sendall(bytearray(message,"utf-8"))
         printf("Enviado mensaje: " + str(message),3)
@@ -124,7 +124,7 @@ def sendtoserver(message):
         pass
 
 def sendtoall(message):
-    global server, client_socket, server2, client_socket2
+    global server, client_socket
     try:
         client_socket.sendall(bytearray(message,"utf-8"))
         printf("Enviado mensaje: " + str(message),3)
@@ -132,12 +132,28 @@ def sendtoall(message):
         printf("Ha habido un error. Esta el receptor visible?",0)
         pass
 
+def sendtoclient(message,address):
+    global server, client_socket
+    try:
+        client_socket.sendto(bytearray(message,"utf-8"),address)
+        printf("Enviado mensaje: " + str(message),3)
+    except:
+        printf("Ha habido un error. Esta el cliente visible?",0)
+        pass
+
+def sendfiletoserver(path):
+    global server, client_socket
+    server.sendfile(path,0,None)
+
+def sendfiletoall(path):
+    global server, client_socket
+    client_socket.sendfile(path,0,None)
 
 def server():
-    global server, client_socket, server2, client_socket2
+    global server, client_socket
     printf("funcion server()",2)
     host=""
-    port=42680
+    port=55555
     server=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     server2=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     printf("Intentando establecer el servidor",1)
@@ -151,34 +167,52 @@ def server():
 
     server.bind((host,port))
     server.listen(0)
-    (client_socket, address) = server.accept()
-    printf("Se ha conectado un cliente",0)
-    printf("Cliente: " +str(address),1)
+    server.settimeout(20)
+    cliente = 0
+    try:
+        (client_socket0, address0) = server.accept()
+        cliente = 1
+        printf("Se ha conectado un cliente",0)
+        printf("Cliente: " +str(address0),1)
+    except socket.timeout:
+        printf("Se ha acabado el tiempo máximo de espera.",0)
     data = ""
     r = ""
+    free_will = False
+    printf("Buscando otros clientes...",3)
     while True:
         try:
-            r = preguntar_din()
-            data=client_socket.recv(1024).decode("utf-8")
-            #data = server.recv(1024)
-            if str(data) != "":    
-                printf("Recibido mensaje: " + str(data),3)
-                response = try_execute(data)
-                if not response:
-                    printf("Parece que no se devuelve respuesta. response = -1",3)
-                    response = -1
-                try:
-                    sendtoall(response)
-                    printf("Enviada informacion de vuelta: " + str(response),3)
-                    data = ""
-                except:
-                    printf("No se ha podido contestar al cliente",0)
-                    pass
+            server.settimeout(.1)
+            server.listen(0)
+            exec("(client_socket"+str(cliente)+", address"+str(cliente)+") = server.accept()")
+            exec("printf('Cliente: ' + str(address"+str(cliente)+"),1)")
+            cliente += 1
+            pass
+        except socket.timeout:
+            #printf("TIMEOUT",3)
+            if free_will == True:
+                r = preguntar_din()
+            for clientes in range(cliente):    
+                exec("data=client_socket"+str(clientes)+".recv(1024).decode('utf-8')")
+                #data = server.recv(1024)
+                if str(data) != "":    
+                    printf("Recibido mensaje: " + str(data),3)
+                    response = try_execute(data)
+                    if not response:
+                        printf("Parece que no se devuelve respuesta. response = -1",3)
+                        response = -1
+                    try:
+                        exec("sendtoclient(response,address"+str(clientes)+")")
+                        printf("Enviada informacion de vuelta: " + str(response) + " a cliente " + str(clientes),3)
+                        data = ""
+                    except:
+                        printf("No se ha podido contestar al cliente",0)
+                        pass
             if r == "exit":
                 break
             elif r != "":
                 sendtoall(r)
-            
+            pass
         except socket.error:
             printf("Error: Socket error",0)
             break
