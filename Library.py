@@ -80,7 +80,7 @@ def client(host, port):
     conexion = False
     while not conexion:
         try:
-            print("Server_ip = " + str(host) + ", port = " + str(port))
+            printf("Server_ip = " + str(host) + ", port = " + str(port),1)
             if host[0] == "'":
                 host = host[1:len(host)-1]
             server.connect((str(host),int(port)))
@@ -98,18 +98,37 @@ def client(host, port):
             elif r == "n" or r == "N" or r == "no" or r == "No" or r == "NO":
                 break
             pass
+    tiempo_espera = 3
+    printf("Tiempo de espera = " + str(tiempo_espera),1) 
     if acceder == "y" or acceder == "Y" or acceder == "yes" or acceder == "Yes" or acceder == "YES":    
         printf("Instrucciones al servidor:",0)
         data = ""
         while True:
-            r = preguntar_din() 
+            if tiempo_espera == 3:
+                r = preguntar_din() 
             if r == "exit":
                 break
             elif r != "":
                 data = sendtoserver(r)
                 r = ""
-            data = server.recv(1024).decode("utf-8")
-            if data != "":
+            server.settimeout(tiempo_espera)
+            try: 
+                data_coded = server.recv(1024)
+                if str(data_coded) != "" and str(data_coded) != None:
+                    printf("Recibida informacion codificada del servidor: " +str(data_coded),2)
+                data = data_coded.decode("utf-8")
+                tiempo_espera = 3
+                printf("Tiempo de espera = " + str(tiempo_espera),1) 
+            except socket.timeout:
+                printf("El servidor ha agotado el tiempo de espera.",0)
+                if tiempo_espera == 3:    
+                    resp = preguntar("Cerrar conexion? Y/n")
+                    if resp == "y" or resp == "Y" or resp == "yes" or resp == "Yes" or resp == "YES":
+                        close_server()
+                        break
+                tiempo_espera += 1
+                printf("Se ha aumentado el tiempo de espera a " + str(tiempo_espera),1)
+            if data != "" and data != None:
                 printf("El servidor responde: " + str(data),0)
                 data = ""
 
@@ -118,7 +137,8 @@ def sendtoserver(message):
     global server, client_socket
     try:
         server.sendall(bytearray(message,"utf-8"))
-        printf("Enviado mensaje: " + str(message),3)
+        printf("Enviado mensaje: " + str(message),2)
+        printf("Enviado mensaje codificado:" + str(bytearray(message,"utf-8")),3)
     except:
         printf("Ha habido un error. Esta el servidor visible?",0)
         pass
@@ -164,7 +184,6 @@ def server():
     public_ip = public_ip[2:len(public_ip)-1]
     printf("Public ip: " + public_ip,-3)
     printf("Port = " + str(port),-3)
-
     server.bind((host,port))
     server.listen(0)
     server.settimeout(20)
@@ -184,6 +203,7 @@ def server():
         try:
             server.settimeout(.1)
             server.listen(0)
+            #printf("accept",3)
             exec("(client_socket"+str(cliente)+", address"+str(cliente)+") = server.accept()")
             exec("printf('Cliente: ' + str(address"+str(cliente)+"),1)")
             cliente += 1
@@ -192,11 +212,18 @@ def server():
             #printf("TIMEOUT",3)
             if free_will == True:
                 r = preguntar_din()
-            for clientes in range(cliente):    
-                exec("data=client_socket"+str(clientes)+".recv(1024).decode('utf-8')")
+            for clientes in range(cliente):  
+                exec("client_socket"+str(clientes)+".settimeout(3)")
+                try:
+                    data_coded = exec("client_socket"+str(clientes)+".recv(1024).decode('utf-8')")
+                    printf("Recibida informacion codificada del cliente"+str(clientes)+ ":"+ str(data_coded),2)
+                    data = data_coded.decode("utf-8")
+                except:
+                    pass
                 #data = server.recv(1024)
-                if str(data) != "":    
+                if str(data) != "" and str(data) != None:    
                     printf("Recibido mensaje: " + str(data),3)
+                    exec("client_socket"+str(clientes)+".settimeout(3)")
                     response = try_execute(data)
                     if not response:
                         printf("Parece que no se devuelve respuesta. response = -1",3)
@@ -216,6 +243,10 @@ def server():
         except socket.error:
             printf("Error: Socket error",0)
             break
+        except KeyboardInterrupt:
+            close_server()
+            client_socket.close()
+            printf("Conexión cerrada correctamente",0)
     close_server()
     client_socket.close()
     printf("Conexión cerrada correctamente",0)
@@ -287,7 +318,7 @@ def read_arg(argumentos, lista_argumentos):
             if lista_variables[variable_numero][0] != "all":
                 try:
                     printf("Try: arg = " + str(lista_variables[variable_numero][0])+"("+str(arg) + ")",2)
-                    cambiar_tipo(arg,str(lista_variables[variable_numero][0]))
+                    arg = cambiar_tipo(arg,str(lista_variables[variable_numero][0]))
                 except:
                     printf("Parece que el tipo de argumento no coincide. Puede que haya errores.",1)
                     pass
@@ -412,24 +443,28 @@ def cambiar_tipo(arg, tipo):
         if tipo == "str":
             try:
                 arg = str(arg)
+                tipo_argumento(arg)
                 return arg
             except:
                 pass
         elif tipo == "int":
             try:
                 arg = int(arg)
+                tipo_argumento(arg)
                 return arg
             except:
                 pass
         elif tipo == "float":
             try:
                 arg = float(arg)
+                tipo_argumento(arg)
                 return arg
             except:
                 pass
         elif tipo == "bool":
             try:
                 arg = bool(arg)
+                tipo_argumento(arg)
                 return arg
             except:
                 pass
