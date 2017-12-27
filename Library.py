@@ -4,6 +4,7 @@ import sys
 import socket
 import urllib.request
 import select
+import collections
 
 path_registro = str(os.getcwd()) + chr(92)
 argumentos = sys.argv
@@ -84,8 +85,6 @@ def client(host, port):
             if host[0] == "'":
                 host = host[1:len(host)-1]
             server.connect((str(host),int(port)))
-            #server2.bind((host,port+1))
-            #server2.listen(0)
             printf("Se ha establecido conexion correctamente con " + str(host),0)
             conexion = True
             acceder = "y"
@@ -98,76 +97,104 @@ def client(host, port):
             elif r == "n" or r == "N" or r == "no" or r == "No" or r == "NO":
                 break
             pass
-    tiempo_espera = 3
-    printf("Tiempo de espera = " + str(tiempo_espera),1) 
+    tiempo_espera = 10
+    tiempo_espera_inicial = tiempo_espera
+    printf("Tiempo de espera = " + str(tiempo_espera),2) 
     if acceder == "y" or acceder == "Y" or acceder == "yes" or acceder == "Yes" or acceder == "YES":    
         printf("Instrucciones al servidor:",0)
         data = ""
+        continuar = False
         while True:
-            if tiempo_espera == 3:
+            if tiempo_espera <= tiempo_espera_inicial or not continuar:
                 r = preguntar_din() 
             if r == "exit":
                 break
             elif r != "":
-                data = sendtoserver(r)
+                data = sendtoserver(r,host,port)
                 r = ""
             server.settimeout(tiempo_espera)
             try: 
                 data_coded = server.recv(1024)
-                if str(data_coded) != "" and str(data_coded) != None:
-                    printf("Recibida informacion codificada del servidor: " +str(data_coded),2)
                 data = data_coded.decode("utf-8")
-                tiempo_espera = 3
-                printf("Tiempo de espera = " + str(tiempo_espera),1) 
+                printf("El servidor ha respondido: " + str(data), 1)
+                tiempo_espera = tiempo_espera_inicial
+                printf("Tiempo de espera = " + str(tiempo_espera),2) 
             except socket.timeout:
                 printf("El servidor ha agotado el tiempo de espera.",0)
-                if tiempo_espera == 3:    
-                    resp = preguntar("Cerrar conexion? Y/n")
-                    if resp == "y" or resp == "Y" or resp == "yes" or resp == "Yes" or resp == "YES":
+                if tiempo_espera == tiempo_espera_inicial:    
+                    resp = preguntar("Cerrar conexion? Y/n/'R'eintentar/'C'ontinuar")    
+                    if resp == "n" or resp == "N" or resp == "no" or resp == "No" or resp == "NO":
+                        tiempo_espera += 1
+                        printf("Se ha aumentado el tiempo de espera a " + str(tiempo_espera),1)
+                    elif resp == "reintentar" or resp == "Reintentar" or resp == "REINTENTAR" or resp == "r" or resp == "R": 
+                        continuar = True
+                        tiempo_espera += 1
+                        printf("Se ha aumentado el tiempo de espera a " + str(tiempo_espera),1)
+                    elif resp == "continuar" or resp == "Continuar" or resp == "CONTINUAR" or resp == "c" or resp == "C":
+                        continue
+                    else:
                         close_server()
                         break
-                tiempo_espera += 1
-                printf("Se ha aumentado el tiempo de espera a " + str(tiempo_espera),1)
+                else:
+                    tiempo_espera += 1
+                    printf("Se ha aumentado el tiempo de espera a " + str(tiempo_espera),1)
             if data != "" and data != None:
                 printf("El servidor responde: " + str(data),0)
                 data = ""
 
 
-def sendtoserver(message):
+def sendtoserver(message,address,port):
     global server, client_socket
+    printf("Funcion sendtoserver("+str(message)+","+str(address)+","+str(port)+")",2)
     try:
-        server.sendall(bytearray(message,"utf-8"))
+        server.sendto(bytearray(str(message),"utf-8"),(str(address),int(port)))
         printf("Enviado mensaje: " + str(message),2)
         printf("Enviado mensaje codificado:" + str(bytearray(message,"utf-8")),3)
     except:
         printf("Ha habido un error. Esta el servidor visible?",0)
-        pass
+        return -1
 
-def sendtoall(message):
-    global server, client_socket
+def sendtoall(message,client_socket):
+    global server
+    printf("Funcion sendtoall("+str(message)+","+str(client_socket)+")",2)
     try:
         client_socket.sendall(bytearray(message,"utf-8"))
         printf("Enviado mensaje: " + str(message),3)
     except:
         printf("Ha habido un error. Esta el receptor visible?",0)
-        pass
+        return -1
 
 def sendtoclient(message,address):
     global server, client_socket
+    printf("Funcion sendtoclient("+str(message)+","+ str(address)+")",2)
     try:
-        client_socket.sendto(bytearray(message,"utf-8"),address)
+        client_socket.send(bytearray(message,"utf-8"),address)
         printf("Enviado mensaje: " + str(message),3)
     except:
         printf("Ha habido un error. Esta el cliente visible?",0)
-        pass
+        return -1
+        
 
 def sendfiletoserver(path):
     global server, client_socket
-    server.sendfile(path,0,None)
+    #NOT TESTED
+    printf("Funcion sendfiletoserver("+str(path)+")",2)
+    try:
+        server.sendfile(path,0,None)
+    except:
+        printf("Ha habido un error. Esta el servidor visible?",0)
+        return -1
 
 def sendfiletoall(path):
     global server, client_socket
-    client_socket.sendfile(path,0,None)
+    #NOT TESTED
+    printf("Funcion sendfiletoall("+str(path)+")",2)
+    try:
+        client_socket.sendfile(path,0,None)
+    except:
+        printf("Ha habido un error. Esta el cliente visible?",0)
+        return -1
+
 
 def server():
     global server, client_socket
@@ -188,11 +215,13 @@ def server():
     server.listen(0)
     server.settimeout(20)
     cliente = 0
+    cliente_connected = []
+    cliente_Noresponse = collections.Counter()
     try:
         (client_socket0, address0) = server.accept()
-        cliente = 1
+        cliente_connected.append(cliente)
+        exec("printf('Cliente"+str(cliente)+": ' + str(address"+str(cliente)+"),1)")
         printf("Se ha conectado un cliente",0)
-        printf("Cliente: " +str(address0),1)
     except socket.timeout:
         printf("Se ha acabado el tiempo máximo de espera.",0)
     data = ""
@@ -201,26 +230,33 @@ def server():
     printf("Buscando otros clientes...",3)
     while True:
         try:
+            cliente += 1
             server.settimeout(.1)
             server.listen(0)
-            #printf("accept",3)
-            exec("(client_socket"+str(cliente)+", address"+str(cliente)+") = server.accept()")
-            exec("printf('Cliente: ' + str(address"+str(cliente)+"),1)")
-            cliente += 1
+            exec("client_socket"+str(cliente)+", address"+str(cliente)+" = server.accept()")
+            exec("printf('Cliente"+str(cliente)+": ' + str(address"+str(cliente)+"),1)")
+            cliente_connected.append(cliente)
             pass
         except socket.timeout:
-            #printf("TIMEOUT",3)
+            cliente -= 1
             if free_will == True:
                 r = preguntar_din()
-            for clientes in range(cliente):  
-                exec("client_socket"+str(clientes)+".settimeout(3)")
+            for clientes in cliente_connected:  
+                cliente_socket = eval("client_socket"+str(clientes)) 
+                cliente_socket.settimeout(3)
                 try:
-                    data_coded = exec("client_socket"+str(clientes)+".recv(1024).decode('utf-8')")
-                    printf("Recibida informacion codificada del cliente"+str(clientes)+ ":"+ str(data_coded),2)
-                    data = data_coded.decode("utf-8")
+                    data = cliente_socket.recv(1024).decode('utf-8')
+                    if data_coded == None:
+                        cliente_Noresponse.update({str(clientes):1})
+                        printf("El cliente" + str(clientes) + " ha enviado None (x" + str(cliente_Noresponse[str(clientes)])+")",3)
+                        if cliente_Noresponse[str(clientes)] > 10:
+                            printf("Parece que el cliente"+str(clientes)+ " se ha desconectado. Cerrando conexion...",1)
+                            cliente_connected.remove(clientes)
+                            del cliente_Noresponse[str(clientes)]
+                            exec("client_socket"+str(clientes)+".close()")
+                            continue
                 except:
                     pass
-                #data = server.recv(1024)
                 if str(data) != "" and str(data) != None:    
                     printf("Recibido mensaje: " + str(data),3)
                     exec("client_socket"+str(clientes)+".settimeout(3)")
@@ -229,9 +265,14 @@ def server():
                         printf("Parece que no se devuelve respuesta. response = -1",3)
                         response = -1
                     try:
-                        exec("sendtoclient(response,address"+str(clientes)+")")
-                        printf("Enviada informacion de vuelta: " + str(response) + " a cliente " + str(clientes),3)
-                        data = ""
+                        try:    
+                            err = eval("sendtoall(str(response),client_socket"+str(clientes)+")")
+                            if err != -1:    
+                                printf("Enviada informacion de vuelta: " + str(response) + " a cliente" + str(clientes),3)
+                            data = ""
+                        except:
+                            printf("Ha ocurrido algun tipo de error",2)
+                            pass
                     except:
                         printf("No se ha podido contestar al cliente",0)
                         pass
@@ -244,11 +285,15 @@ def server():
             printf("Error: Socket error",0)
             break
         except KeyboardInterrupt:
+            for clientes in cliente_connected:
+                exec("client_socket"+str(clientes)+".close()")
             close_server()
-            client_socket.close()
             printf("Conexión cerrada correctamente",0)
+
+    #Cerrar socket primero, pues socket pertenece a server
+    for clientes in cliente_connected:
+        exec("client_socket"+str(clientes)+".close()")
     close_server()
-    client_socket.close()
     printf("Conexión cerrada correctamente",0)
 
 def try_execute(data):
@@ -256,7 +301,7 @@ def try_execute(data):
     response = None
     printf("funcion try_execute("+str(data)+")",2)
     try:          
-        response = exec(data)        
+        response = eval(data)        
         printf("Ejecutado en python " + str(data),2)
     except:
         try:
@@ -318,6 +363,7 @@ def read_arg(argumentos, lista_argumentos):
             if lista_variables[variable_numero][0] != "all":
                 try:
                     printf("Try: arg = " + str(lista_variables[variable_numero][0])+"("+str(arg) + ")",2)
+                    arg = eval(str(lista_variables[variable_numero][0])+"("+str(arg)+")")
                     arg = cambiar_tipo(arg,str(lista_variables[variable_numero][0]))
                 except:
                     printf("Parece que el tipo de argumento no coincide. Puede que haya errores.",1)
@@ -438,6 +484,7 @@ def analizar_argumento(arg, lista_argumentos):
 
 def cambiar_tipo(arg, tipo):
     if tipo_argumento(arg) == tipo:
+        printf("Parece que ya son del mismo tipo",2)
         return arg
     else:
         if tipo == "str":
