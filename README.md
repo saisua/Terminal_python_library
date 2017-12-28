@@ -194,6 +194,7 @@
 #
 #Arguments:
 #respuesta should be "respuesta = pregunta('Are you tired of writting this README? (Y/Y)')", so that you can execute
+
 if si_o_no(respuesta):
   close_readme()
 --------------------------------------------------------------
