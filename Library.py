@@ -6,62 +6,22 @@ import urllib.request
 import select
 import collections
 
+######
+#Poner en el mismo directorio y:
+#sys.path.append(os.path.abspath(os.path.dirname(os.path.abspath("Library.py"))))
+#from Library import *
+#set_external_file(os.path.dirname(os.path.abspath("Myextfile")),"Myextfile")
+######
+
 path_registro = str(os.getcwd()) + chr(92)
 argumentos = sys.argv
 verbose = 0
 lista_argumentos = []
 
-###
-def sumar(lista):
-    print("funcion sumar("+str(lista)+")")
-    resultado = 0
-    for numero in lista:
-        resultado += numero
-    print("sumar: "+ str(resultado))
-
-def anadir(lista):
-    print("funcion anadir("+str(lista)+")")
-    resultado = ""
-    for elemento in lista:
-        resultado += str(elemento)
-    print("anadir: " + str(resultado))
-
-def restar(lista):
-    print("funcion restar("+str(lista)+")")
-    resultado = lista[0] - lista[1]
-    print("restar: " + str(resultado))
-
-def multiplicar(lista):
-    print("funcion multiplicar("+str(lista)+")")
-    resultado = 1
-    for elemento in lista:
-        resultado *= elemento
-    print("multiplicar: " + str(resultado))
-
-def ejecutar(orden):
-    print("funcion ejecutar("+str(orden)+")")
-    for a in orden:
-        printf("a = " + str(a[1:len(a)-1]),3)
-        try:
-            exec(str(a[1:len(a)-1]))
-        except:
-            print("Error ejecutando la orden " + str(a[1:len(a)-1]))
-            pass
-###
-
-def help():
-    print("Esta libreria esta hecha en y para Python"
-    "#['-argumento', 'función_a_ejecutar(variables)']"
-    "#'@' Variable de tipo String"
-    "#'*' Variable de tipo int"
-    "#'.' Variable de tipo double o long"
-    "#'?' Variable de tipo boolean"
-    "#'$' variable del tipo que sea"
-    "#':' Todas las variables sean del tipo que sean"
-    "#';@' Todas las variables del tipo string"
-    "#'2-4*' Dos a cuatro variables de tipo entero"
-    "#',' Separa dos condiciones")
-
+def set_external_file(path,fliename):
+    external_file = str(path)
+    sys.path.append(os.path.abspath(os.path.dirname(os.path.abspath("Library.py"))))
+    exec("import "+str(filename)+" as extfile")
 
 def printf(printed,verb):
     if verbose >= verb:
@@ -142,7 +102,6 @@ def client(host, port):
                 printf("El servidor responde: " + str(data),0)
                 data = ""
 
-
 def sendtoserver(message,address,port):
     global server, client_socket
     printf("Funcion sendtoserver("+str(message)+","+str(address)+","+str(port)+")",2)
@@ -174,7 +133,6 @@ def sendtoclient(message,address):
         printf("Ha habido un error. Esta el cliente visible?",0)
         return -1
         
-
 def sendfiletoserver(path):
     global server, client_socket
     #NOT TESTED
@@ -194,7 +152,6 @@ def sendfiletoall(path):
     except:
         printf("Ha habido un error. Esta el cliente visible?",0)
         return -1
-
 
 def server():
     global server, client_socket
@@ -338,7 +295,11 @@ def read_arg(argumentos, lista_argumentos):
         if arg[0] == "-":
             if len(lista_final) > 0:
                 printf("lista_final = " + str(lista_final),2)
-                exec(str(argumento_analizado[0][0:len(argumento_analizado[0])-1])+str(lista_final)+")")
+                try:
+                    exec(str(argumento_analizado[0][0:len(argumento_analizado[0])-1])+str(lista_final)+")")
+                except:
+                    exec("extfile."+str(argumento_analizado[0][0:len(argumento_analizado[0])-1])+str(lista_final)+")")
+                
                 parametros_final = ""
                 lista_final = []
             numero_variables = 0
@@ -355,7 +316,10 @@ def read_arg(argumentos, lista_argumentos):
                             numero_variables += int(argumento[1])
             else:
                 printf("Parece que no hay argumentos. Ejecutando " + str(argumento_analizado[0]),1)
-                exec(argumento_analizado[0])
+                try:
+                    exec(argumento_analizado[0])
+                except:
+                    exec("extfile."+str(argumento_analizado[0]))
         elif len(argumento_analizado[1:]) != 0 and len(lista_variables) >= variable_numero:
             if numero_variables < 0:
                 #[tipo_argumento,numero_argumentos]
@@ -385,7 +349,10 @@ def read_arg(argumentos, lista_argumentos):
             variable_numero += 1
     printf("lista_final = " + str(lista_final),2)
     if len(lista_final) > 0:
-        exec(str(argumento_analizado[0][0:len(argumento_analizado[0])-1])+str(lista_final)+")")
+        try:
+            exec(str(argumento_analizado[0][0:len(argumento_analizado[0])-1])+str(lista_final)+")")
+        except:
+            exec("extfile."+str(argumento_analizado[0][0:len(argumento_analizado[0])-1])+str(lista_final)+")")
 
 def analizar_argumento(arg, lista_argumentos):
     printf("Funcion analizar_argumento(" + str(arg) + "," + str(lista_argumentos) + ")",2)
@@ -793,6 +760,4 @@ def existe_fichero(path):
     else:
         return False
 
-
 read_arg(argumentos,lista_argumentos)
-printf("fin",1)
