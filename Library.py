@@ -18,7 +18,7 @@ argumentos = sys.argv
 verbose = 0
 lista_argumentos = []
 
-def set_external_file(path,fliename):
+def set_external_file(path,filename):
     external_file = str(path)
     sys.path.append(os.path.abspath(os.path.dirname(os.path.abspath("Library.py"))))
     exec("import "+str(filename)+" as extfile")
