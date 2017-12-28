@@ -8,8 +8,8 @@ import collections
 
 path_registro = str(os.getcwd()) + chr(92)
 argumentos = sys.argv
-verbose = 3
-lista_argumentos = [["--hh","ejecutar(@;)"],["--close","close_server()"],["-s","sendtoall(@)"],["--server","server()"],["-c","tclient(@,*)"],["-h", "print(@)"], ["--suma", "sumar(;*)"], ["-a", "anadir(:)"],["-r", "restar(*,.)"],["-m", "multiplicar(2-4*)"]]
+verbose = 0
+lista_argumentos = []
 
 ###
 def sumar(lista):
@@ -792,6 +792,7 @@ def existe_fichero(path):
         return True
     else:
         return False
+
 
 read_arg(argumentos,lista_argumentos)
 printf("fin",1)
