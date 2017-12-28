@@ -60,7 +60,7 @@ def client(host, port):
     tiempo_espera = 10
     tiempo_espera_inicial = tiempo_espera
     printf("Tiempo de espera = " + str(tiempo_espera),2) 
-    if acceder == "y" or acceder == "Y" or acceder == "yes" or acceder == "Yes" or acceder == "YES":    
+    if si_o_no(respuesta):    
         printf("Instrucciones al servidor:",0)
         data = ""
         continuar = False
@@ -507,12 +507,12 @@ def abrir_archivo(path,modo):
             printf("ERROR: el archivo " + str(path) + " no existe", 0)
             printf("",0)
             inp = preguntar("Crear ahora? Y/n: ")
-            if inp == "Y" or inp == "y":
+            if si_o_no(inp):
                 printf("Creando " + str(path),1)
                 open(path, modo)
                 printf("Archivo creado!",1)
                 inp = preguntar("Probar a abrir " + str(path) + "? Y/n:")
-                if inp == "Y" or inp == "y":
+                if si_o_no(inp):
                     abrir_archivo(path,modo)
 
     else:
@@ -759,5 +759,13 @@ def existe_fichero(path):
         return True
     else:
         return False
+
+def si_o_no(respuesta):
+    if respuesta == "Si" or respuesta == "Sí" or respuesta == "sí" or respuesta == "si" or respuesta == "SÍ" or respuesta == "SI" or respuesta == "S" or respuesta == "s" or respuesta == "Y" or respuesta == "YES" or respuesta == "Yes" or respuesta == "yes" or respuesta == "y":
+        return True
+    elif respuesta == "No" or respuesta == "NO" or respuesta == "no" or respuesta == "n" or respuesta == "N":
+        return False
+    else:
+        return respuesta
 
 read_arg(argumentos,lista_argumentos)
