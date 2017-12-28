@@ -158,6 +158,7 @@
 #It only saves lista into a new file
 #
 #Arguments:
+
 #path is the path where the file is going to be saved. Lista is the list is being saved in it
 
 #def encontrar_en_fichero(path, busqueda):
@@ -196,19 +197,35 @@
 #respuesta should be "respuesta = pregunta('Are you tired of writting this README? (Y/Y)')", so that you can execute
 
 if si_o_no(respuesta):
+
   close_readme()
+  
 --------------------------------------------------------------
+
 saisua got TIMEDOUT (x0)
+
 saisua got TIMEDOUT (x1)
+
 saisua got TIMEDOUT (x2)
+
 saisua got TIMEDOUT (x3)
+
 saisua got TIMEDOUT (x4)
+
 saisua got TIMEDOUT (x5)
+
 saisua got TIMEDOUT (x6)
+
 saisua got TIMEDOUT (x7)
+
 saisua got TIMEDOUT (x8)
+
 saisua got TIMEDOUT (x9)
+
 saisua got TIMEDOUT (x10)
+
 saisua got TIMEDOUT (x11)
+
 Looks like saisua disconnected. Shutting down connection...
+
 completed.
