@@ -6,6 +6,11 @@ import urllib.request
 import select
 import collections
 
+"""
+os.system("python3 -m pip install pybluez")
+import bluetooth
+"""
+
 ######
 #Poner en el mismo directorio y:
 #sys.path.append(os.path.abspath(os.path.dirname(os.path.abspath("Library.py"))))
@@ -15,8 +20,10 @@ import collections
 
 path_registro = str(os.getcwd()) + chr(92)
 argumentos = sys.argv
-verbose = 0
+verbose = 3
 lista_argumentos = []
+
+client_socket = None
 
 def set_external_file(path,filename):
     external_file = str(path)
@@ -27,18 +34,26 @@ def printf(printed,verb):
     if verbose >= verb:
         print(printed)
 
+
+printf("",1)
+printf("",1)
+printf("",1)
+printf("",1)
+printf("",1)
+printf("",1)
+
 def tclient(list):
     print("funcion tclient("+str(list)+")")
-    client(str(list[0]),list[1])
+    Int_client(str(list[0]),list[1])
 
-def client(host, port):
+def Int_client(host, port):
     global server, client_socket
     printf("funcion client(" + str(host) + "," + str(port)+")",2)
     server=""
     server=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     printf("Server = " + str(server),3)
-    acceder = "no"
     conexion = False
+    acceder = "no"
     while not conexion:
         try:
             printf("Server_ip = " + str(host) + ", port = " + str(port),1)
@@ -54,13 +69,13 @@ def client(host, port):
             if r == "forzar" or r == "Forzar" or r == "FORZAR":
                 conexion = True
                 acceder = "y"
-            elif r == "n" or r == "N" or r == "no" or r == "No" or r == "NO":
+            elif not si_o_no(r):
                 break
             pass
     tiempo_espera = 10
     tiempo_espera_inicial = tiempo_espera
     printf("Tiempo de espera = " + str(tiempo_espera),2) 
-    if si_o_no(respuesta):    
+    if si_o_no(acceder):
         printf("Instrucciones al servidor:",0)
         data = ""
         continuar = False
@@ -113,8 +128,8 @@ def sendtoserver(message,address,port):
         printf("Ha habido un error. Esta el servidor visible?",0)
         return -1
 
-def sendtoall(message,client_socket):
-    global server
+def sendtoall(message):
+    global server, client_socket
     printf("Funcion sendtoall("+str(message)+","+str(client_socket)+")",2)
     try:
         client_socket.sendall(bytearray(message,"utf-8"))
@@ -153,7 +168,7 @@ def sendfiletoall(path):
         printf("Ha habido un error. Esta el cliente visible?",0)
         return -1
 
-def server():
+def Int_server():
     global server, client_socket
     printf("funcion server()",2)
     host=""
@@ -203,7 +218,7 @@ def server():
                 cliente_socket.settimeout(3)
                 try:
                     data = cliente_socket.recv(1024).decode('utf-8')
-                    if data_coded == None:
+                    if data == None:
                         cliente_Noresponse.update({str(clientes):1})
                         printf("El cliente" + str(clientes) + " ha enviado None (x" + str(cliente_Noresponse[str(clientes)])+")",3)
                         if cliente_Noresponse[str(clientes)] > 10:
@@ -289,6 +304,7 @@ def read_arg(argumentos, lista_argumentos):
     numero_variables = 0
     parametros_final = ""
     lista_final = []
+    argumento_analizado = ""
     for arg in argumentos[1:]:                   
         arg = str(arg)
         printf("arg = " + str(arg),3)
@@ -354,10 +370,17 @@ def read_arg(argumentos, lista_argumentos):
         except:
             exec("extfile."+str(argumento_analizado[0][0:len(argumento_analizado[0])-1])+str(lista_final)+")")
 
+def tipo_argumento(arg):
+    printf("Funcion tipo_argumento("+str(arg)+")",2)
+    arg = str(type(arg))
+    arg_type = arg[8:(len(arg)-2)]
+    printf(arg_type,2)
+    return arg_type
+
 def analizar_argumento(arg, lista_argumentos):
     printf("Funcion analizar_argumento(" + str(arg) + "," + str(lista_argumentos) + ")",2)
     funcion_ejecutar = ""
-    tipo_argumento = ""
+    tipo_de_argumento = ""
     numero_argumentos = 0
     lista_return = []
     numero = False
@@ -368,7 +391,7 @@ def analizar_argumento(arg, lista_argumentos):
             argumento = False
             for letter in listed_arg[1]:
                 printf("Letter = " + str(letter),3)
-                printf("tipo_argumentos = " + str(tipo_argumento) + ", numero_argumentos = " + str(numero_argumentos),3)
+                printf("tipo_de_argumentos = " + str(tipo_de_argumento) + ", numero_argumentos = " + str(numero_argumentos),3)
                 if letter == "(":
                     argumento = True
                     funcion_ejecutar += letter
@@ -376,13 +399,13 @@ def analizar_argumento(arg, lista_argumentos):
                     argumento = False
                     if numero_argumentos >= 0:
                         numero_argumentos += 1
-                    if tipo_argumento != "" :
-                        lista_return.append([tipo_argumento,numero_argumentos])
+                    if tipo_de_argumento != "" :
+                        lista_return.append([tipo_de_argumento,numero_argumentos])
                         printf("lista_return = " + str(lista_return),2)
                     if numero_argumentos < 0:
                         break
                     numero_argumentos = 0
-                    tipo_argumento = ""
+                    tipo_de_argumento = ""
                     numero = False
                     break
                 elif argumento == True:
@@ -400,35 +423,35 @@ def analizar_argumento(arg, lista_argumentos):
                     if letter == ",":
                         if numero_argumentos >= 0:
                             numero_argumentos += 1
-                        if tipo_argumento != "":
-                            printf("Añadido argumento: "+ str([tipo_argumento,numero_argumentos]),2)
-                            lista_return.append([tipo_argumento,numero_argumentos])
+                        if tipo_de_argumento != "":
+                            printf("Añadido argumento: "+ str([tipo_de_argumento,numero_argumentos]),2)
+                            lista_return.append([tipo_de_argumento,numero_argumentos])
                         if numero_argumentos < 0:
                             break
                         numero_argumentos = 0
-                        tipo_argumento = ""
+                        tipo_de_argumento = ""
                         numero = False
                     elif letter == ":":
                         numero_argumentos = -1
-                        tipo_argumento = "all"
-                        printf("Encontrado '"+str(letter)+"'. > numero_argumentos = " + str(numero_argumentos) + ", tipo_argumento = " + str(tipo_argumento),2)
+                        tipo_de_argumento = "all"
+                        printf("Encontrado '"+str(letter)+"'. > numero_argumentos = " + str(numero_argumentos) + ", tipo_argumento = " + str(tipo_de_argumento),2)
                     elif letter == ";":
                         numero_argumentos = -1
                         printf("Encontrado '"+str(letter)+"'. > numero_argumentos = " + str(numero_argumentos),2)
                     elif letter == "$":
-                        tipo_argumento = "all"
+                        tipo_de_argumento = "all"
                         printf("Encontrado '"+str(letter)+"'. > numero_argumentos = " + str(numero_argumentos),2)
-                    elif letter == "@" and tipo_argumento != "all":
-                        tipo_argumento = "str"
+                    elif letter == "@" and tipo_de_argumento != "all":
+                        tipo_de_argumento = "str"
                         printf("Encontrado '"+str(letter)+"'. > numero_argumentos = " + str(numero_argumentos),2)
-                    elif letter == "*" and tipo_argumento != "all":
-                        tipo_argumento = "int"
+                    elif letter == "*" and tipo_de_argumento != "all":
+                        tipo_de_argumento = "int"
                         printf("Encontrado '"+str(letter)+"'. > numero_argumentos = " + str(numero_argumentos),2)
-                    elif letter == "?" and tipo_argumento != "all":
-                        tipo_argumento = "bool"
+                    elif letter == "?" and tipo_de_argumento != "all":
+                        tipo_de_argumento = "bool"
                         printf("Encontrado '"+str(letter)+"'. > numero_argumentos = " + str(numero_argumentos),2)
-                    elif letter == "." and tipo_argumento != "all":
-                        tipo_argumento = "float"
+                    elif letter == "." and tipo_de_argumento != "all":
+                        tipo_de_argumento = "float"
                         printf("Encontrado '"+str(letter)+"'. > numero_argumentos = " + str(numero_argumentos),2)
                     else:
                         try:
@@ -468,14 +491,14 @@ def cambiar_tipo(arg, tipo):
                 return arg
             except:
                 pass
-        elif tipo == "float":
+        elif tipo == "float" or tipo == "flo":
             try:
                 arg = float(arg)
                 tipo_argumento(arg)
                 return arg
             except:
                 pass
-        elif tipo == "bool":
+        elif tipo == "bool" or tipo == "boo":
             try:
                 arg = bool(arg)
                 tipo_argumento(arg)
@@ -484,14 +507,7 @@ def cambiar_tipo(arg, tipo):
                 pass
     return arg
 
-def tipo_argumento(arg):
-    printf("Funcion tipo_argumento("+str(arg)+")",2)
-    arg = str(type(arg))
-    arg_type = arg[8:(len(arg)-2)]
-    printf(arg_type,2)
-    return arg_type
-
-def abrir_archivo(path,modo):
+def abrir_archivo(path,modo, others=""):
     printf("Abriendo archivo " + str(path), 1)
     if modo == "r" or modo == "w" or modo == "a" or modo == "r+":
         printf("Modo aceptado " + str(modo), 2)
@@ -499,7 +515,10 @@ def abrir_archivo(path,modo):
             archivo = open(path, modo)
             printf("archivo: " + str(archivo),3)
             if modo != "w" and modo != "a":
-                archivo_abierto = archivo.read()
+                if others == "l":
+                    archivo_abierto = archivo.readlines()
+                else:
+                    archivo_abierto = archivo.read()
                 printf("archivo abierto: " + str(archivo_abierto),2)
                 return archivo_abierto
             return archivo
@@ -541,6 +560,7 @@ def preguntar_din():
         return respuesta
 
 def leer_fichero(path, cantidad):
+    printf("funcion leer_fichero(" + str(path) + "," + str(cantidad) + ")",2)
     #cantidad de tipo string separa
     #"1,2,-3 3-6,1 $hola$-"
     #el primer grupo, segundo subgrupo, desde el primer hasta el 3r elemento del subsubgrupo
@@ -571,140 +591,176 @@ def leer_fichero(path, cantidad):
     anterior = 0
     subgroup = []
     cantidad += " "
-    if tipo_argumento(cantidad) == "str":
-        for kant in cantidad:
-            guardar_pos = 0
+    marca_control = 0
 
-            if kant == " ":
-                if anterior == 1:
-                    numero_guardar.append([contador[len(contador)],contador[0:len(contador)-1],guardar_num])
-                elif anterior == -1:
-                    marcapaginas_guardar.append(["$" + marcapaginas_valor + "$",guardar_num])
-                elif anterior == 0 and guardar_num == -1:
-                    numero_guardar.append([0,contador[0:len(contador)-1],1])
-                anterior = 0
-                guardar_num = 0
-                contador = [0,0]
-            elif kant == "-":
-                #Falta hacer 3-6 del 3 al 6
-                if anterior == 0:
-                    guardar_num = -1
-                else:
-                    guardar_num = 1
-            elif kant == "$":
-                anterior = -1
-            elif kant == ",":
-                guardar_num = 0
-                anterior = 0
-                group += 1
-                while len(contador) < group:
-                    contador.append(0)
+
+    for kant in cantidad:
+        guardar_pos = 0
+
+        if kant == " ":
+            if anterior == 1:
+                numero_guardar.append([contador[len(contador)],contador[0:len(contador)-1],guardar_num])
+            elif anterior == -1:
+                marcapaginas_guardar.append(["$" + marcapaginas_valor + "$",guardar_num])
+            elif anterior == 0 and guardar_num == -1:
+                numero_guardar.append([0,contador[0:len(contador)-1],1])
+            anterior = 0
+            guardar_num = 0
+            contador = [0,0]
+        elif kant == "-":
+            #Falta hacer 3-6 del 3 al 6
+            if anterior == 0:
+                guardar_num = -1
             else:
+                guardar_num = 1
                 if anterior == -1:
-                    marcapaginas_valor += kant
-                else:
-                    valor += kant
-            contador[group] += 1
-
-        marcapaginas_valor = ""
-        valor = ""
-        group = 1
-        contador = [0,0]
-        contar = 0
-
-        for letter in archivo:
-            if letter == "[":
-                group += 1
-                while len(contador) < group + 1:
-                    contador.append(0)
-            elif letter == "]" and valor == "":
-                group -= 1
-            elif letter == "," or (letter == "]" and valor != ""):
-                condicion_guardar = [-100,-100,-100]
-                for condicion_guardar in numero_guardar:
-                    for condicion_grupo in condicion_guardar[1]:
-                        if contador[group] == condicion_guardar[0] and group == condicion_grupo+1:
-                            if condicion_guardar[2] == -1:
-                                guardar = False
-                            elif condicion_guardar[2] > -1:
-                                guardar = True
-                            break
-                orden_exec = ""
-                pos_exec = ""
-                list_exec = []
-                for c in range(group):
-                    if c > 0:
-                        pos_exec += str("[" + str(contador[c]) + "]")
-                        list_exec.append(contador[c])
-                orden_exec += str(".append(valor)")  
-                end_while = False
-                while not end_while:                    
-                    try:
-                        if group > 1:
-                            printf("exec. final" + str(pos_exec) + str(orden_exec) , 2)
-                            printf("valor: " + str(valor), 2)
-                            exec(str("final"+pos_exec+orden_exec))
-                            if guardar:
-                                exec(str("final_return"+pos_exec+orden_exec))
-                            else:
-                                exec(str("final_return"+pos_exec+".append(None)"))
-                        else:
-                            exec("final"+orden_exec)
-                            exec("final_return"+orden_exec)
-                        end_while = True
-                    except IndexError:
-                        order = ""
-                        for a in range(len(list_exec)):
-                            if a > 0:
-                                order += "[" + str(list_exec[a-1]) + "]" 
-                                if a+2 == group:
-                                    exec("final" + order + ".append([])")
-                                    exec("final_return" + order + ".append([])")
-                            elif a == 0 and group -2 == 0:
-                                final.append([])
-                                final_return.append([])
-
-                if guardar == True:
-                    printf("Guardado " + str(valor),3)
-                if condicion_guardar[2] == 0:
-                    guardar = False
-                valor = ""
-                contador[group] += 1
-            elif letter == "$":
-                if group >= 0:
-                    marcapaginas_antes = contador - 1
-                else:
-                    marcapaginas_lista.append([[marcapaginas_antes,contador+1],group*-1])
-                    for condicion_guardar2 in marcapaginas_guardar:
-                        if condicion_guardar2[0] == marcapaginas_valor:
-                            if condicion_guardar2[1] == -1:
-                                guardar = False
-                            elif condicion_guardar2[1] == 1:
-                                guardar = True
-                            marcapaginas_valor = ""
-                            break
-                group *= -1
+                    marcapaginas_guardar.append(["$" + marcapaginas_valor + "$",1])
+        elif kant == "$":
+            anterior = -1
+        elif kant == ",":
+            guardar_num = 0
+            anterior = 0
+            group += 1
+            while len(contador) < group:
+                contador.append(0)
+        else:
+            if anterior == -1:
+                marcapaginas_valor += kant
             else:
-                if group > 0:
-                    valor += str(letter)
-                else:
-                    marcapaginas_valor += str(letter)
-            contar += 1
+                valor += kant
+        contador[group] += 1
 
+    marcapaginas_valor = ""
+    valor = ""
+    group = 1
+    contador = [0,0]
+    contar = 0
+
+    for letter in archivo:
+        if letter == "[":
+            group += 1
+            while len(contador) < group + 1:
+                contador.append(0)
+        elif letter == "]":
+            group -= 1
+            valor = ""
+        elif letter == "," or (letter == "]" and valor != ""):
+            marca_control = 0
+            condicion_guardar = [-100,-100,-100]
+            for condicion_guardar in numero_guardar:
+                for condicion_grupo in condicion_guardar[1]:
+                    if contador[group] == condicion_guardar[0] and group == condicion_grupo+1:
+                        if condicion_guardar[2] == -1:
+                            guardar = False
+                        elif condicion_guardar[2] > -1:
+                            guardar = True
+                        break
+            orden_exec = ""
+            pos_exec = ""
+            list_exec = []
+            for c in range(group):
+                if c > 0:
+                    pos_exec += str("[" + str(contador[c]-1) + "]")
+                    list_exec.append(contador[c])
+            orden_exec += str(".append(cambiar_tipo(valor[3:],valor[0:3]))")  
+            end_while = False
+            while not end_while:     
+                if len(valor) <= 3:
+                    valor = ""
+                    break               
+                try:
+                    if group > 1:
+                        printf("exec. final" + str(pos_exec) + str(orden_exec) , 2)
+                        printf("valor: " + str(valor), 2)
+                        exec(str("final"+pos_exec+orden_exec))
+                        if guardar:
+                            exec(str("final_return"+pos_exec+orden_exec))
+                        else:
+                            final_return.append("")
+                        #else:
+                        #    exec(str("final_return"+pos_exec+".append(None)"))
+                    else:
+                        exec("final"+orden_exec)
+                        if guardar:
+                            exec("final_return"+orden_exec)
+                        else:
+                            final_return.append("")
+                    end_while = True
+                except IndexError:
+                    order = ""
+                    for a in range(len(list_exec)):
+                        if a > 0:
+                            order += "[" + str(list_exec[a-1]) + "]" 
+                            if a+2 == group:
+                                exec("final" + order + ".append([])")
+                                exec("final_return" + order + ".append([])")
+                        elif a == 0 and group -2 == 0:
+                            final.append([])
+                            final_return.append([])
+
+            if guardar == True:
+                printf("Guardado " + str(valor),3)
+            if condicion_guardar[2] == 0:
+                guardar = False
+            valor = ""
+            contador[group] += 1
+        elif letter == "$":
+            if marca_control == 0:
+                marcapaginas_valor = "$"
+                marca_control = 1
+            else:
+                marca_control = 0
+                marcapaginas_valor += "$"
+            if group >= 0:
+                marcapaginas_antes = contador[group] - 1
+            else:
+                marcapaginas_lista.append([[marcapaginas_antes,contador[group]+1],group*-1])
+                for condicion_guardar2 in marcapaginas_guardar:
+                    if condicion_guardar2[0] == marcapaginas_valor:
+                        if condicion_guardar2[1] == -1:
+                            guardar = False
+                        elif condicion_guardar2[1] == 1:
+                            guardar = True
+                        marcapaginas_valor = ""
+                        break
+            group *= -1
+        else:
+            if group > 0:
+                valor += str(letter)
+            else:
+                marcapaginas_valor += str(letter)
+        contar += 1
+    if tipo_argumento(cantidad) == "int":
+        try:
+            final_return = [final_return[cantidad]]
+        except:
+            return False
+    elif tipo_argumento(cantidad) == "list":
+        try:
+            final_return = eval("final_return" + str(cantidad))
+        except:
+            return False
 
     printf("Fichero leído! ", 1)
     printf("Resultado: " + str(final_return), 3)
-    printf("Devolviendo la lista ([valor buscado,posición])")
+    #printf("Devolviendo la lista ([valor buscado,posición])",3)
     return final_return
         
-def guardar_fichero(path, lista):
-    abrir_archivo(path,"w")
+def borrar_fichero(path):
+    tmp = abrir_archivo(path,"w").close()
+
+def guardar_fichero(path, lista, salto=False):
     archivo = abrir_archivo(path,"a")
+    if salto:
+        archivo.write("\n")
     lista_guardar = simplificar_lista(lista)
     write_this = ""
     for elemento in lista_guardar:
+        printf("elemento: " + str(elemento), 3)
         if elemento == "]" and write_this[len(write_this)-1] == ",":
             write_this = write_this[0:(len(write_this)-1)]
+        elif elemento != "[":
+            write_this +=  tipo_argumento(elemento)[:3]
         write_this += str(elemento)
         if not elemento == "[" and not elemento == "]":
             write_this += (",")
@@ -715,12 +771,13 @@ def encontrar_en_fichero(path, busqueda):
     #encuentra un valor o texto en el archivo guardado. Devuelve valor y posicion. Si hay mas de uno, devuelve lista de listas
     path = str(path)
     printf("Funcion encontrar_en_fichero(" + str(path) +"," + str(busqueda)+")",2)
-    lista_final = []
     lista_busqueda = simplificar_lista(leer_fichero(path,"-"))
     printf("Buscando " + str(busqueda) + " en " + str(lista_busqueda),3) 
-    encontrar_en_lista(lista_busqueda,str(busqueda))
-    
+    lista_final = encontrar_en_lista(lista_busqueda,busqueda)
+    return lista_final
+  
 def encontrar_en_lista(lista, busqueda):
+    printf("funcion encontrar_en_lista(" + str(lista) + "," + str(busqueda) + ")",2)
     contador = 0
     lista_final = []
     lista_busqueda = lista
@@ -734,25 +791,25 @@ def encontrar_en_lista(lista, busqueda):
                 printf(str(valor_guardado) + " != " + str(busqueda), 3)
             contador += 1
         else:
-            printf("El tipo de variable del elemento de la lista " + str(valor_guardado) + " (" + str(tipo_argumento(valor_guardado)) + ") no coincide con el de la lista",2)
+            printf("El tipo de variable del elemento de la lista " + str(valor_guardado) + " (" + str(tipo_argumento(valor_guardado)) + ") no coincide con el buscado",2)
     if contador == 0:
-        printf("O el archivo esta vacio, o el tipo de variable que se busca (" + str(tipo_argumento(busqueda)) + "es erróneo",0)
+        printf("O el archivo esta vacio, o el tipo de variable que se busca (" + str(tipo_argumento(busqueda)) + ") es erróneo",0)
 
     printf("lista_final = " + str(lista_final),3)
     return lista_final
 
 def simplificar_lista(lista):
-    out = []
+    ret = []
     for elemento in lista:
         if tipo_argumento(elemento) == "list":
-            out.extend("[")
-            out.extend(simplificar_lista(elemento))
-            out.extend("]")
-            printf("out: " + str(out), 3)
+            ret.extend("[")
+            ret.extend(simplificar_lista(elemento))
+            ret.extend("]")
+            printf("sub-return: " + str(ret), 3)
         else:
-            out.append(elemento)
-    printf("out_return: " + str(out), 2)
-    return out
+            ret.append(elemento)
+    printf("return: " + str(ret), 2)
+    return ret
 
 def existe_fichero(path):
     if os.path.exists(path):
@@ -761,11 +818,151 @@ def existe_fichero(path):
         return False
 
 def si_o_no(respuesta):
+    printf("funcion si_o_no(" + str(respuesta) + ")",2)
     if respuesta == "Si" or respuesta == "Sí" or respuesta == "sí" or respuesta == "si" or respuesta == "SÍ" or respuesta == "SI" or respuesta == "S" or respuesta == "s" or respuesta == "Y" or respuesta == "YES" or respuesta == "Yes" or respuesta == "yes" or respuesta == "y":
         return True
     elif respuesta == "No" or respuesta == "NO" or respuesta == "no" or respuesta == "n" or respuesta == "N":
         return False
     else:
         return respuesta
+
+def comparar_archivos(archivo1_path, archivo2_path, exactitud):
+    printf("funcion comparar_archivos(" + str(archivo1_path) + ", " + str(archivo2_path) + ", " + str(exactitud)+ ")", 2)
+    ###Exactitud = 0, compara archivos abiertos
+    ## Exactitud = 1, compara lineas
+    #  Exactitud = 2, compara letras
+    archivo1 = abrir_archivo(archivo1_path, "r", "l")
+    archivo2 = abrir_archivo(archivo2_path, "r", "l")
+
+    if exactitud == 0:
+        if archivo1 == archivo2:
+            printf("Archivo1 = Archivo2" , 1)
+            return True
+        else:
+            printf("Archivo1 != Archivo2" , 2)
+            return False
+    elif exactitud >= 1:
+        archivo1_lineas = archivo1
+        archivo1_lineas = [x.strip() for x in archivo1_lineas] 
+        archivo2_lineas = archivo2
+        archivo2_lineas = [x.strip() for x in archivo2_lineas] 
+
+        archivo2_comparado = archivo2_lineas
+        contador1 = -1
+        lineas1_incorrectas = []
+
+        for linea1 in archivo1_lineas:
+            contador1 += 1
+            contador2 = -1
+            correcto = False
+            for linea2 in archivo2_comparado:
+                contador2 += 1
+                if linea1 == linea2:
+                    archivo2_comparado.pop(contador2)
+                    correcto = True
+                    break
+            if correcto == False:
+                lineas1_incorrectas.append(contador1)
+                
+                
+
+        if exactitud == 2:
+            ##Letras1_incorrectas[[linea,posicion]]
+            letras1_incorrectas = []
+            
+
+            for linea1 in lineas1_incorrectas:
+                contador = -1
+                for letra1 in str(archivo1_lineas[linea1]):
+                    contador += 1
+                    for linea2 in archivo2_comparado:
+                        if contador < len(linea2):
+                            if letra1 != str(linea2[contador]):
+                                letras1_incorrectas.append([linea1,contador])
+                        else: 
+                            letras1_incorrectas.append([linea1,contador])
+            printf("Encontradas letras incorrectas: " + str(letras1_incorrectas),3)
+            return letras1_incorrectas
+        else:
+            printf("Encontradas lineas incorrectas: " + str(lineas1_incorrectas),3)
+            return lineas1_incorrectas
+    else:
+        printf("Error en el valor de exactitud. Devolviendo False", 1)
+        return False
+
+test1 = "C://Users//Pat//Desktop//test1.txt"
+test2 = "C://Users//Pat//Desktop//test2.txt"
+
+borrar_fichero(test1)
+borrar_fichero(test2)
+guardar_fichero(test1, ["hola", 2, "$aa$", [34,"$ee$"], 34] )
+
+leer_fichero(test1,"-$aa$")
+
+"""
+def bt_server(bt_addr):
+    server_sock=bluetooth.BluetoothSocket( bluetooth.L2CAP )
+    
+    port = 0x1001
+
+    server_sock.bind(("",port))
+    server_sock.listen(0)
+
+    client_sock,address = server_sock.accept()
+    print("Accepted connection from ",address)
+
+    data = client_sock.recv(1024)
+    print("Data received: ", str(data))
+
+    while data:
+        client_sock.send('Echo => ' + str(data))
+        data = client_sock.recv(1024)
+        print("Data received:", str(data))
+    
+    client_sock.close()
+    server_sock.close()
+
+def bt_client(bt_addr):
+    sock=bluetooth.BluetoothSocket(bluetooth.L2CAP)
+    
+    port = 0x1001
+
+    print("trying to connect to %s on PSM 0x%X" % (bt_addr, port))
+
+    sock.connect((bt_addr, port))
+
+    print("connected.  type stuff")
+    while True:
+        data = input()
+        if(len(data) == 0): break
+        sock.send(data)
+        data = sock.recv(1024)
+        print("Data received:", str(data))
+
+    sock.close()
+
+def bt_scan():
+    services = bluetooth.find_service(address=None)
+
+    if len(services) > 0:
+        print("found %d services on %s" % (len(services), sys.argv[1]))
+        print("")
+    else:
+        print("no services found")
+
+    for svc in services:
+        print("Service Name: %s"    % svc["name"])
+        print("    Host:        %s" % svc["host"])
+        print("    Description: %s" % svc["description"])
+        print("    Provided By: %s" % svc["provider"])
+        print("    Protocol:    %s" % svc["protocol"])
+        print("    channel/PSM: %s" % svc["port"])
+        print("    svc classes: %s "% svc["service-classes"])
+        print("    profiles:    %s "% svc["profiles"])
+        print("    service id:  %s "% svc["service-id"])
+        print("")
+
+bt_scan()
+"""
 
 read_arg(argumentos,lista_argumentos)
