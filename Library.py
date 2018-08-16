@@ -42,8 +42,23 @@ printf("",1)
 printf("",1)
 printf("",1)
 
+def bruteforce(argument):
+    printf("funcion bruteforce("+str(argument)+")",2)
+    final = []
+    binary_num = 0
+    try:
+        argument=int(argument)
+    except:
+        for binary in argument:
+            binary_num = binary_num * 2 + 1
+    printf("Found bruteforce length: " + str(binary_num), 2)
+    for option in range(binary_num):
+        final.append("{0:b}".format(option+1))
+    printf("Calculated all bruteforce options: " + str(final) ,3)
+    return final
+
 def tclient(list):
-    print("funcion tclient("+str(list)+")")
+    printf("funcion tclient("+str(list)+")",2)
     Int_client(str(list[0]),list[1])
 
 def Int_client(host, port):
@@ -889,7 +904,7 @@ def comparar_archivos(archivo1_path, archivo2_path, exactitud):
     else:
         printf("Error en el valor de exactitud. Devolviendo False", 1)
         return False
-
+"""
 test1 = "C://Users//Pat//Desktop//test1.txt"
 test2 = "C://Users//Pat//Desktop//test2.txt"
 
@@ -899,7 +914,7 @@ guardar_fichero(test1, ["hola", 2, "$aa$", [34,"$ee$"], 34] )
 
 leer_fichero(test1,"-$aa$")
 
-"""
+
 def bt_server(bt_addr):
     server_sock=bluetooth.BluetoothSocket( bluetooth.L2CAP )
     

@@ -27,6 +27,13 @@
 #Arguments:
 #printed is the message to be printed, and verb is the minimum level of verbosity needed to be displayed
 
+#def bruteforce(argument):
+#
+#Returns all posible combinations in binary numbers
+#
+#Arguments:
+#argument is a string, list or int, andreturns in a list all posible outcomes in binary, the lenght of which is the lenth of the string, the list or the int itself
+
 #def client(host, port):
 #
 #Tries to connect via socket-server connection to a remote server.
